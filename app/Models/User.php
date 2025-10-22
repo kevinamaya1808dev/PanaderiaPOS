@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\DB; // Añadir DB
 
 class User extends Authenticatable
 {
@@ -14,7 +15,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'cargo_id', // Para la relación con Cargo
+        'cargo_id', 
     ];
     
     protected $hidden = [
@@ -22,18 +23,37 @@ class User extends Authenticatable
         'remember_token',
     ];
 
-    // Relación con Cargo
     public function cargo()
     {
         return $this->belongsTo(Cargo::class);
     }
     
-    // Relación con Empleado (clave foránea está en Empleado)
     public function empleado()
     {
-        // Un usuario TIENE un empleado
         return $this->hasOne(Empleado::class, 'idUserFK');
     }
-    
-    // Puedes definir aquí tus métodos para checkear permisos si los necesitas
+
+    /**
+     * Verifica si el usuario tiene permiso para un módulo y acción específicos.
+     * @param string $module Nombre del módulo (ej: 'empleados')
+     * @param string $action Nombre de la acción (ej: 'mostrar', 'alta', 'editar')
+     * @return bool
+     */
+    public function hasPermissionTo(string $module, string $action): bool
+    {
+        // El Super Administrador (ID 1) siempre tiene todos los permisos
+        if ($this->cargo_id === 1) {
+            return true;
+        }
+
+        // Usar join para verificar si existe el permiso
+        $hasPermission = DB::table('permisos')
+            ->join('modulos', 'permisos.modulo_id', '=', 'modulos.id')
+            ->where('permisos.cargo_id', $this->cargo_id)
+            ->where('modulos.nombre', $module)
+            ->where('permisos.' . $action, 1) // Debe ser 1 (TRUE)
+            ->exists();
+
+        return $hasPermission;
+    }
 }

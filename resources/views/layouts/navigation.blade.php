@@ -1,61 +1,116 @@
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
-    <div class="container-fluid">
-        <!-- Logo y Nombre de la Aplicación -->
-        <a class="navbar-brand" href="{{ route('dashboard') }}">
-            <i class="fas fa-bread-slice me-2"></i> {{ config('app.name', 'Panadería POS') }}
+<div class="sidebar-user-info">
+    <div class="fw-bold text-white fs-5">{{ Auth::user()->name ?? 'Usuario' }}</div>
+    <small>{{ Auth::user()->cargo->nombre ?? 'N/A' }}</small>
+</div>
+
+<ul class="nav flex-column">
+    <!-- DASHBOARD -->
+    <li class="nav-item">
+        <a class="nav-link text-white {{ request()->routeIs('dashboard') ? 'active bg-secondary' : '' }}" href="{{ route('dashboard') }}">
+            <i class="fas fa-home me-2"></i> Dashboard
         </a>
-        
-        <!-- Toggler para Móviles -->
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
+    </li>
+    
+    <!-- SECCIÓN ADMINISTRACIÓN -->
+    @if (Auth::user()->hasPermissionTo('cargos', 'mostrar') || Auth::user()->hasPermissionTo('usuarios', 'mostrar'))
+        <li class="nav-item mt-3">
+            <div class="text-secondary fw-bold ms-3">ADMINISTRACIÓN</div>
+        </li>
+    @endif
+    
+    {{-- GESTIÓN DE CARGOS --}}
+    @if (Auth::user()->hasPermissionTo('cargos', 'mostrar'))
+        <li class="nav-item">
+            <a class="nav-link text-white {{ request()->routeIs('cargos.index') ? 'active bg-secondary' : '' }}" href="{{ route('cargos.index') }}">
+                <i class="fas fa-id-badge me-2"></i> Cargos y Permisos
+            </a>
+        </li>
+    @endif
+    
+    {{-- GESTIÓN DE EMPLEADOS (Módulo: usuarios) --}}
+    @if (Auth::user()->hasPermissionTo('usuarios', 'mostrar'))
+        <li class="nav-item">
+            <a class="nav-link text-white {{ request()->routeIs('empleados.index') ? 'active bg-secondary' : '' }}" href="{{ route('empleados.index') }}">
+                <i class="fas fa-users me-2"></i> Gestión de Empleados
+            </a>
+        </li>
+    @endif
+    
+    <!-- SECCIÓN CATÁLOGO -->
+    @if (Auth::user()->hasPermissionTo('productos', 'mostrar') || Auth::user()->hasPermissionTo('inventario', 'mostrar'))
+        <li class="nav-item mt-3">
+            <div class="text-secondary fw-bold ms-3">CATÁLOGO</div>
+        </li>
+    @endif
 
-        <div class="collapse navbar-collapse" id="navbarNavDropdown">
-            <!-- Enlaces de Navegación Principales (Izquierda) -->
-            <ul class="navbar-nav me-auto">
-                <li class="nav-item">
-                    <a class="nav-link @if(request()->routeIs('dashboard')) active @endif" href="{{ route('dashboard') }}">
-                        <i class="fas fa-tachometer-alt"></i> Dashboard
-                    </a>
-                </li>
-                
-                {{-- Ejemplo de un Módulo de Gestión --}}
-                <li class="nav-item">
-                    <a class="nav-link @if(request()->routeIs('empleados.*')) active @endif" href="{{ route('empleados.index') }}">
-                        <i class="fas fa-users"></i> Empleados
-                    </a>
-                </li>
-                
-                {{-- Aquí puedes añadir más enlaces como Productos, Ventas, etc. --}}
+    {{-- CATEGORÍAS (Módulo: productos) --}}
+    @if (Auth::user()->hasPermissionTo('productos', 'mostrar'))
+        <li class="nav-item">
+            <a class="nav-link text-white {{ request()->routeIs('categorias.index') ? 'active bg-secondary' : '' }}" href="{{ route('categorias.index') }}">
+                <i class="fas fa-tags me-2"></i> Categorías
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link text-white {{ request()->routeIs('productos.index') ? 'active bg-secondary' : '' }}" href="{{ route('productos.index') }}">
+                <i class="fas fa-boxes me-2"></i> Productos
+            </a>
+        </li>
+    @endif
+    
+    {{-- INVENTARIO (Módulo: inventario) --}}
+    @if (Auth::user()->hasPermissionTo('inventario', 'mostrar'))
+        <li class="nav-item">
+            <a class="nav-link text-white" href="#"><i class="fas fa-warehouse me-2"></i> Inventario</a>
+        </li>
+    @endif
 
-            </ul>
+    <!-- SECCIÓN CRM & COMPRAS -->
+    @if (Auth::user()->hasPermissionTo('clientes', 'mostrar') || Auth::user()->hasPermissionTo('proveedores', 'mostrar') || Auth::user()->hasPermissionTo('compras', 'mostrar'))
+        <li class="nav-item mt-3">
+            <div class="text-secondary fw-bold ms-3">CRM & COMPRAS</div>
+        </li>
+    @endif
 
-            <!-- Configuración del Usuario (Derecha) -->
-            <ul class="navbar-nav ms-auto">
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="fas fa-user-circle"></i> {{ Auth::user()->name }} 
-                        <span class="badge bg-secondary">{{ Auth::user()->cargo->nombre ?? 'Usuario' }}</span>
-                    </a>
-                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdownMenuLink">
-                        <li>
-                            <a class="dropdown-item" href="{{ route('profile.edit') }}">
-                                <i class="fas fa-cog"></i> Perfil
-                            </a>
-                        </li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li>
-                            <!-- Formulario de Logout -->
-                            <form method="POST" action="{{ route('logout') }}">
-                                @csrf
-                                <button type="submit" class="dropdown-item">
-                                    <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
-                                </button>
-                            </form>
-                        </li>
-                    </ul>
-                </li>
-            </ul>
-        </div>
-    </div>
-</nav>
+    {{-- CLIENTES (Módulo: clientes) --}}
+    @if (Auth::user()->hasPermissionTo('clientes', 'mostrar'))
+        <li class="nav-item">
+            <a class="nav-link text-white {{ request()->routeIs('clientes.index') ? 'active bg-secondary' : '' }}" href="{{ route('clientes.index') }}">
+                <i class="fas fa-address-book me-2"></i> Clientes (CRM)
+            </a>
+        </li>
+    @endif
+
+    {{-- PROVEEDORES & COMPRAS --}}
+    @if (Auth::user()->hasPermissionTo('proveedores', 'mostrar'))
+        <li class="nav-item">
+            <a class="nav-link text-white" href="#"><i class="fas fa-truck-moving me-2"></i> Proveedores</a>
+        </li>
+    @endif
+    @if (Auth::user()->hasPermissionTo('compras', 'mostrar'))
+        <li class="nav-item">
+            <a class="nav-link text-white" href="#"><i class="fas fa-shopping-basket me-2"></i> Compras</a>
+        </li>
+    @endif
+
+    <!-- SECCIÓN POS & CAJA -->
+    @if (Auth::user()->hasPermissionTo('ventas', 'mostrar') || Auth::user()->hasPermissionTo('cajas', 'mostrar'))
+        <li class="nav-item mt-3">
+            <div class="text-secondary fw-bold ms-3">POS & CAJA</div>
+        </li>
+    @endif
+
+    {{-- VENTAS (Módulo: ventas) --}}
+    @if (Auth::user()->hasPermissionTo('ventas', 'mostrar'))
+        <li class="nav-item">
+            <a class="nav-link text-white" href="#"><i class="fas fa-cash-register me-2"></i> Ventas (POS)</a>
+        </li>
+    @endif
+    
+    {{-- CAJAS (Módulo: cajas) --}}
+    @if (Auth::user()->hasPermissionTo('cajas', 'mostrar'))
+        <li class="nav-item">
+            <a class="nav-link text-white" href="#"><i class="fas fa-dollar-sign me-2"></i> Flujo de Caja</a>
+        </li>
+    @endif
+    
+</ul>
