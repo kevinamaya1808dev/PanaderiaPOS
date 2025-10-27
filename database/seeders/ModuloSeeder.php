@@ -8,16 +8,25 @@ class ModuloSeeder extends Seeder
 {
     public function run(): void
     {
-        DB::table('modulos')->insert([
-            ['nombre' => 'usuarios', 'created_at' => now(), 'updated_at' => now()],
-            ['nombre' => 'cargos', 'created_at' => now(), 'updated_at' => now()],
-            ['nombre' => 'productos', 'created_at' => now(), 'updated_at' => now()],
-            ['nombre' => 'inventario', 'created_at' => now(), 'updated_at' => now()],
-            ['nombre' => 'proveedores', 'created_at' => now(), 'updated_at' => now()],
-            ['nombre' => 'ventas', 'created_at' => now(), 'updated_at' => now()],
-            ['nombre' => 'compras', 'created_at' => now(), 'updated_at' => now()],
-            ['nombre' => 'cajas', 'created_at' => now(), 'updated_at' => now()],
-            // Puedes agregar más: 'reportes', 'clientes', etc.
-        ]);
+        $modulos_completos = [
+            'usuarios', 
+            'cargos', 
+            'categorias',
+            'productos', 
+            'inventario', 
+            'proveedores', 
+            'ventas', 
+            'compras', 
+            'cajas',
+            'clientes', // Añadimos clientes para que aparezca en la matriz
+        ];
+
+        foreach ($modulos_completos as $nombre) {
+            // USANDO updateOrInsert para evitar fallos de duplicados
+            DB::table('modulos')->updateOrInsert(
+                ['nombre' => $nombre],
+                ['created_at' => now(), 'updated_at' => now()]
+            );
+        }
     }
 }

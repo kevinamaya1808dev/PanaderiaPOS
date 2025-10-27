@@ -1,35 +1,36 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Editar Cliente') }}
-        </h2>
-    </x-slot>
+@extends('layouts.app')
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg">
-                <div class="p-6">
-                    <form action="{{ route('clientes.update', $cliente->idCli) }}" method="POST">
-                        @csrf
-                        @method('PUT') {{-- Esto le dice a Laravel que es una solicitud de actualización (PUT/PATCH) --}}
-                        
-                        <div>
-                            <label for="Nombre" class="block text-sm font-medium text-gray-700">Nombre del Cliente</label>
-                            <input type="text" name="Nombre" id="Nombre" value="{{ old('Nombre', $cliente->Nombre) }}" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                            @error('Nombre') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
-                        </div>
+@section('content')
+<div class="container">
+    <div class="card shadow-sm mx-auto" style="max-width: 500px;">
+        <div class="card-header bg-warning text-dark">
+            <h3 class="mb-0">Editar Cliente: {{ $cliente->Nombre }}</h3>
+        </div>
+        <div class="card-body">
+            <form action="{{ route('clientes.update', $cliente->idCli) }}" method="POST">
+                @csrf
+                @method('PUT')
 
-                        <div class="mt-6">
-                            <button type="submit" class="ml-4 bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
-                                Actualizar Cliente
-                            </button>
-                            <a href="{{ route('clientes.index') }}" class="ml-4 bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded">
-                                Cancelar
-                            </a>
-                        </div>
-                    </form>
+                <div class="mb-3">
+                    <label for="Nombre" class="form-label">Nombre del Cliente</label>
+                    <input type="text" class="form-control @error('Nombre') is-invalid @enderror" id="Nombre" name="Nombre" value="{{ old('Nombre', $cliente->Nombre) }}" required>
+                    @error('Nombre') <div class="invalid-feedback">{{ $message }}</div> @enderror
                 </div>
-            </div>
+                
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="{{ route('clientes.index') }}" class="btn btn-secondary">Cancelar</a>
+                    
+                    {{-- Botón Actualizar (Solo visible si tiene permiso de 'editar') --}}
+                    @if (Auth::user()->hasPermissionTo('clientes', 'editar'))
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-sync"></i> Actualizar Cliente
+                        </button>
+                    @else
+                        <span class="text-danger">No tienes permiso para actualizar este registro.</span>
+                    @endif
+                </div>
+            </form>
         </div>
     </div>
-</x-app-layout>
+</div>
+@endsection

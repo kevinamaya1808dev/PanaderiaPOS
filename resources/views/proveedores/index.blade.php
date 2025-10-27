@@ -3,12 +3,12 @@
 @section('content')
 <div class="container">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Gestión de Clientes (CRM Básico)</h2>
+        <h2>Gestión de Proveedores</h2>
         
-        {{-- Botón para CREAR CLIENTE (Solo visible si tiene permiso de 'alta') --}}
-        @if (Auth::user()->hasPermissionTo('clientes', 'alta'))
-            <a href="{{ route('clientes.create') }}" class="btn btn-primary">
-                <i class="fas fa-user-plus"></i> Crear Nuevo Cliente
+        {{-- Botón para CREAR (Solo visible si tiene permiso de 'alta') --}}
+        @if (Auth::user()->hasPermissionTo('proveedores', 'alta'))
+            <a href="{{ route('proveedores.create') }}" class="btn btn-primary">
+                <i class="fas fa-truck me-2"></i> Registrar Nuevo Proveedor
             </a>
         @endif
     </div>
@@ -25,34 +25,38 @@
         <table class="table table-striped table-hover">
             <thead class="table-dark">
                 <tr>
-                    <th>ID Cliente</th>
-                    <th>Nombre</th>
-                    <th>Fecha de Registro</th>
+                    <th>ID</th>
+                    <th>Nombre Contacto</th>
+                    <th>Empresa</th>
+                    <th>Teléfono</th>
+                    <th>Correo</th>
                     <th style="width: 150px;">Acciones</th>
                 </tr>
             </thead>
             <tbody>
-                @forelse ($clientes as $cliente)
+                @forelse ($proveedores as $proveedor)
                 <tr>
-                    <td>{{ $cliente->idCli }}</td>
-                    <td>{{ $cliente->Nombre }}</td>
-                    <td>{{ $cliente->created_at ? $cliente->created_at->format('Y-m-d') : 'N/A' }}</td>
+                    <td>{{ $proveedor->id }}</td>
+                    <td>{{ $proveedor->nombre }}</td>
+                    <td>{{ $proveedor->empresa ?? 'N/A' }}</td>
+                    <td>{{ $proveedor->telefono ?? 'N/A' }}</td>
+                    <td>{{ $proveedor->correo ?? 'N/A' }}</td>
                     <td>
                         <div class="d-flex">
                             
                             {{-- Editar (Solo visible si tiene permiso de 'editar') --}}
-                            @if (Auth::user()->hasPermissionTo('clientes', 'editar'))
-                                <a href="{{ route('clientes.edit', $cliente->idCli) }}" class="btn btn-sm btn-warning me-1" title="Editar">
+                            @if (Auth::user()->hasPermissionTo('proveedores', 'editar'))
+                                <a href="{{ route('proveedores.edit', $proveedor->id) }}" class="btn btn-sm btn-warning me-1" title="Editar">
                                     <i class="fas fa-edit"></i>
                                 </a>
                             @endif
 
                             {{-- Eliminar (Solo visible si tiene permiso de 'eliminar') --}}
-                            @if (Auth::user()->hasPermissionTo('clientes', 'eliminar'))
-                                <form action="{{ route('clientes.destroy', $cliente->idCli) }}" method="POST" style="display:inline;">
+                            @if (Auth::user()->hasPermissionTo('proveedores', 'eliminar'))
+                                <form action="{{ route('proveedores.destroy', $proveedor->id) }}" method="POST" style="display:inline;">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-danger" title="Eliminar" onclick="return confirm('¿Estás seguro de eliminar a {{ $cliente->Nombre }}?');">
+                                    <button type="submit" class="btn btn-sm btn-danger" title="Eliminar" onclick="return confirm('¿Estás seguro de eliminar a {{ $proveedor->nombre }}?');">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </form>
@@ -62,7 +66,7 @@
                 </tr>
                 @empty
                     <tr>
-                        <td colspan="4">No hay clientes registrados.</td>
+                        <td colspan="6">No hay proveedores registrados.</td>
                     </tr>
                 @endforelse
             </tbody>

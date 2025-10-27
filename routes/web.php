@@ -10,6 +10,11 @@ use App\Http\Controllers\CargoController;
 use App\Http\Controllers\PermisoController;
 use App\Http\Controllers\CategoriaController;
 use App\Http\Controllers\ProductoController;
+use App\Http\Controllers\InventarioController;
+use App\Http\Controllers\CajaController;
+use App\Http\Controllers\ProveedorController;
+use App\Http\Controllers\CompraController;
+use App\Http\Controllers\VentaController;
 
 /*
 |--------------------------------------------------------------------------
@@ -79,17 +84,17 @@ Route::middleware('auth')->group(function () {
     Route::put('cargos/{cargo}/permisos', [PermisoController::class, 'update'])->name('cargos.permisos.update')->middleware('permiso:cargos,editar');
 
 
-    // MÓDULO: CATEGORÍAS (Alias: productos)
-    // Listado (mostrar)
-    Route::get('categorias', [CategoriaController::class, 'index'])->name('categorias.index')->middleware('permiso:productos,mostrar');
-    // Alta (alta)
-    Route::get('categorias/create', [CategoriaController::class, 'create'])->name('categorias.create')->middleware('permiso:productos,alta');
-    Route::post('categorias', [CategoriaController::class, 'store'])->name('categorias.store')->middleware('permiso:productos,alta');
-    // Edición (editar)
-    Route::get('categorias/{categoria}/edit', [CategoriaController::class, 'edit'])->name('categorias.edit')->middleware('permiso:productos,editar');
-    Route::put('categorias/{categoria}', [CategoriaController::class, 'update'])->name('categorias.update')->middleware('permiso:productos,editar');
-    // Eliminación (eliminar)
-    Route::delete('categorias/{categoria}', [CategoriaController::class, 'destroy'])->name('categorias.destroy')->middleware('permiso:productos,eliminar');
+    // MÓDULO: CATEGORÍAS
+// Listado (mostrar)
+Route::get('categorias', [CategoriaController::class, 'index'])->name('categorias.index')->middleware('permiso:categorias,mostrar');
+// Alta (alta)
+Route::get('categorias/create', [CategoriaController::class, 'create'])->name('categorias.create')->middleware('permiso:categorias,alta');
+Route::post('categorias', [CategoriaController::class, 'store'])->name('categorias.store')->middleware('permiso:categorias,alta');
+// Edición (editar)
+Route::get('categorias/{categoria}/edit', [CategoriaController::class, 'edit'])->name('categorias.edit')->middleware('permiso:categorias,editar');
+Route::put('categorias/{categoria}', [CategoriaController::class, 'update'])->name('categorias.update')->middleware('permiso:categorias,editar');
+// Eliminación (eliminar)
+Route::delete('categorias/{categoria}', [CategoriaController::class, 'destroy'])->name('categorias.destroy')->middleware('permiso:categorias,eliminar');
     
     
     // MÓDULO: PRODUCTOS (Alias: productos) - Las rutas de productos también deben protegerse
@@ -117,5 +122,76 @@ Route::middleware('auth')->group(function () {
     // Eliminación (eliminar)
     Route::delete('clientes/{cliente}', [ClienteController::class, 'destroy'])->name('clientes.destroy')->middleware('permiso:clientes,eliminar');
 
-    // Aquí irían Proveedores, Compras, Ventas, Cajas...
+ 
+        // ==========================================================
+    // MÓDULO: INVENTARIO 
+    // ==========================================================
+    
+    // Listado de Inventario (mostrar)
+    Route::get('inventario', [InventarioController::class, 'index'])
+        ->name('inventario.index')
+        ->middleware('permiso:inventario,mostrar'); 
+
+    // Edición de Stock/Límites (editar)
+    Route::get('inventario/{producto}/edit', [InventarioController::class, 'edit'])
+        ->name('inventario.edit')
+        ->middleware('permiso:inventario,editar'); 
+        
+    Route::put('inventario/{producto}', [InventarioController::class, 'update'])
+        ->name('inventario.update')
+        ->middleware('permiso:inventario,editar');
+        
+    // NOTA: No hay ruta 'alta' o 'eliminar' de Inventario porque el stock se maneja
+    // a través de Edición (ajustes) o de los módulos de Compras/Ventas.
+
+
+    // PROVEEDORES (Alias: proveedores)
+    Route::get('proveedores', [ProveedorController::class, 'index'])->name('proveedores.index')->middleware('permiso:proveedores,mostrar');
+    Route::get('proveedores/create', [ProveedorController::class, 'create'])->name('proveedores.create')->middleware('permiso:proveedores,alta');
+    Route::post('proveedores', [ProveedorController::class, 'store'])->name('proveedores.store')->middleware('permiso:proveedores,alta');
+    Route::get('proveedores/{proveedore}/edit', [ProveedorController::class, 'edit'])->name('proveedores.edit')->middleware('permiso:proveedores,editar');
+    Route::put('proveedores/{proveedore}', [ProveedorController::class, 'update'])->name('proveedores.update')->middleware('permiso:proveedores,editar');
+    Route::delete('proveedores/{proveedore}', [ProveedorController::class, 'destroy'])->name('proveedores.destroy')->middleware('permiso:proveedores,eliminar');
+
+    // COMPRAS (Alias: compras) <-- RUTAS AÑADIDAS/CORREGIDAS
+    Route::get('compras', [CompraController::class, 'index'])->name('compras.index')->middleware('permiso:compras,mostrar');
+    Route::get('compras/create', [CompraController::class, 'create'])->name('compras.create')->middleware('permiso:compras,alta');
+    Route::post('compras', [CompraController::class, 'store'])->name('compras.store')->middleware('permiso:compras,alta');
+    Route::get('compras/{compra}/edit', [CompraController::class, 'edit'])->name('compras.edit')->middleware('permiso:compras,editar');
+    Route::put('compras/{compra}', [CompraController::class, 'update'])->name('compras.update')->middleware('permiso:compras,editar');
+    Route::delete('compras/{compra}', [CompraController::class, 'destroy'])->name('compras.destroy')->middleware('permiso:compras,eliminar');
+    
+    // ==========================================================
+    // MÓDULO: GESTIÓN DE CAJA (Alias: cajas)
+    // ==========================================================
+    
+    // VISTA PRINCIPAL (Mostrar estado actual de la caja)
+    Route::get('cajas', [CajaController::class, 'index'])
+        ->name('cajas.index')
+        ->middleware('permiso:cajas,mostrar');
+
+    // ABRIR CAJA (Acción de 'alta')
+    Route::post('cajas/abrir', [CajaController::class, 'abrirCaja'])
+        ->name('cajas.abrir')
+        ->middleware('permiso:cajas,alta'); 
+
+    // CERRAR CAJA (Acción de 'eliminar')
+    Route::post('cajas/cerrar', [CajaController::class, 'cerrarCaja'])
+        ->name('cajas.cerrar')
+        ->middleware('permiso:cajas,eliminar');
+    
+    // ==========================================================
+    // MÓDULO: PUNTO DE VENTA (TPV) (Alias: ventas)
+    // ==========================================================
+    
+    // Ruta para mostrar la interfaz TPV
+    Route::get('tpv', [VentaController::class, 'tpv'])
+        ->name('ventas.tpv')
+        ->middleware('permiso:ventas,mostrar'); 
+        
+    // Ruta para procesar la venta (recibe JSON desde el TPV)
+    Route::post('ventas', [VentaController::class, 'store'])
+        ->name('ventas.store')
+        ->middleware('permiso:ventas,alta'); 
+
 });

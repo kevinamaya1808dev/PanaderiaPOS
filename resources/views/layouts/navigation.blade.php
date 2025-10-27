@@ -43,13 +43,15 @@
         </li>
     @endif
 
-    {{-- CATEGORÍAS (Módulo: productos) --}}
-    @if (Auth::user()->hasPermissionTo('productos', 'mostrar'))
+{{-- CATEGORÍAS (Módulo: productos) --}}
+    @if (Auth::user()->hasPermissionTo('categorias', 'mostrar'))
         <li class="nav-item">
             <a class="nav-link text-white {{ request()->routeIs('categorias.index') ? 'active bg-secondary' : '' }}" href="{{ route('categorias.index') }}">
                 <i class="fas fa-tags me-2"></i> Categorías
             </a>
         </li>
+            @endif
+    @if (Auth::user()->hasPermissionTo('productos', 'mostrar'))
         <li class="nav-item">
             <a class="nav-link text-white {{ request()->routeIs('productos.index') ? 'active bg-secondary' : '' }}" href="{{ route('productos.index') }}">
                 <i class="fas fa-boxes me-2"></i> Productos
@@ -60,7 +62,7 @@
     {{-- INVENTARIO (Módulo: inventario) --}}
     @if (Auth::user()->hasPermissionTo('inventario', 'mostrar'))
         <li class="nav-item">
-            <a class="nav-link text-white" href="#"><i class="fas fa-warehouse me-2"></i> Inventario</a>
+            <a class="nav-link text-white" href="/inventario"><i class="fas fa-warehouse me-2"></i> Inventario</a>
         </li>
     @endif
 
@@ -83,12 +85,12 @@
     {{-- PROVEEDORES & COMPRAS --}}
     @if (Auth::user()->hasPermissionTo('proveedores', 'mostrar'))
         <li class="nav-item">
-            <a class="nav-link text-white" href="#"><i class="fas fa-truck-moving me-2"></i> Proveedores</a>
+            <a class="nav-link text-white" href="/proveedores"><i class="fas fa-truck-moving me-2"></i> Proveedores</a>
         </li>
     @endif
     @if (Auth::user()->hasPermissionTo('compras', 'mostrar'))
         <li class="nav-item">
-            <a class="nav-link text-white" href="#"><i class="fas fa-shopping-basket me-2"></i> Compras</a>
+            <a class="nav-link text-white" href="/compras"><i class="fas fa-shopping-basket me-2"></i> Compras</a>
         </li>
     @endif
 
@@ -102,14 +104,19 @@
     {{-- VENTAS (Módulo: ventas) --}}
     @if (Auth::user()->hasPermissionTo('ventas', 'mostrar'))
         <li class="nav-item">
-            <a class="nav-link text-white" href="#"><i class="fas fa-cash-register me-2"></i> Ventas (POS)</a>
+            {{-- CORRECCIÓN FINAL: Apuntar a la ruta 'ventas.tpv' (GET /tpv) --}}
+            <a class="nav-link text-white {{ request()->routeIs('ventas.tpv') ? 'active bg-secondary' : '' }}" href="{{ route('ventas.tpv') }}">
+                <i class="fas fa-cash-register me-2"></i> Ventas (POS)
+            </a>
         </li>
     @endif
     
     {{-- CAJAS (Módulo: cajas) --}}
     @if (Auth::user()->hasPermissionTo('cajas', 'mostrar'))
         <li class="nav-item">
-            <a class="nav-link text-white" href="#"><i class="fas fa-dollar-sign me-2"></i> Flujo de Caja</a>
+            <a class="nav-link text-white {{ request()->routeIs('cajas.index') ? 'active bg-secondary' : '' }}" href="{{ route('cajas.index') }}">
+                <i class="fas fa-dollar-sign me-2"></i> Flujo de Caja
+            </a>
         </li>
     @endif
     

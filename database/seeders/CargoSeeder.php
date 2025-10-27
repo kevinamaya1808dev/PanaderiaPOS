@@ -9,11 +9,19 @@ class CargoSeeder extends Seeder
 {
     public function run(): void
     {
-        DB::table('cargos')->insert([
-            ['nombre' => 'Super Administrador', 'created_at' => now(), 'updated_at' => now()],
-            ['nombre' => 'Administrador', 'created_at' => now(), 'updated_at' => now()],
-            ['nombre' => 'Cajero / Vendedor', 'created_at' => now(), 'updated_at' => now()],
-            ['nombre' => 'Inventario', 'created_at' => now(), 'updated_at' => now()],
-        ]);
+        $cargos = [
+            'Super Administrador',
+            'Administrador',
+            'Cajero / Vendedor',
+            'Inventario',
+        ];
+
+        foreach ($cargos as $nombre_cargo) {
+            // USANDO updateOrInsert para evitar fallos de duplicados
+            DB::table('cargos')->updateOrInsert(
+                ['nombre' => $nombre_cargo],
+                ['created_at' => now(), 'updated_at' => now()]
+            );
+        }
     }
 }
