@@ -110,7 +110,7 @@
             </a>
         </li>
     @endif
-    
+
     {{-- CAJAS (Módulo: cajas) --}}
     @if (Auth::user()->hasPermissionTo('cajas', 'mostrar'))
         <li class="nav-item">
@@ -119,5 +119,5 @@
             </a>
         </li>
     @endif
-    
+
 </ul>

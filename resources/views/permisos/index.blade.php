@@ -6,11 +6,15 @@
         Gestión de Permisos para el Cargo: <span class="badge bg-primary">{{ $cargo->nombre }}</span>
     </h2>
 
-    <div class="alert alert-info">
-        Define qué acciones de CRUD (Mostrar, Alta, Detalle, Editar, Eliminar) este cargo puede realizar en cada módulo del sistema.
+    <div class="alert alert-info d-flex justify-content-between align-items-center">
+        <span>Define qué acciones puede realizar este cargo en cada módulo.</span>
+        {{-- NUEVO: Botón único para Seleccionar/Deseleccionar Todos --}}
+        <button type="button" class="btn btn-sm btn-outline-primary" id="toggle-all-permissions">
+            <i class="fas fa-tasks me-1"></i> Seleccionar/Deseleccionar Todos
+        </button>
     </div>
 
-    {{-- Mostrar mensajes de sesión --}}
+    {{-- Mensajes de Sesión --}}
     @if (session('success'))
         <div class="alert alert-success">{{ session('success') }}</div>
     @endif
@@ -27,48 +31,40 @@
         @method('PUT')
 
         <div class="table-responsive">
-            <table class="table table-bordered table-hover align-middle">
+            <table class="table table-bordered table-hover align-middle" id="permissions-table">
                 <thead class="table-dark sticky-top">
                     <tr>
                         <th style="width: 25%;">Módulo</th>
-                        <th class="text-center">Mostrar (Ver en menú)</th>
-                        <th class="text-center">Detalle (Ver registro)</th>
-                        <th class="text-center">Alta (Crear)</th>
-                        <th class="text-center">Editar (Modificar)</th>
-                        <th class="text-center">Eliminar (Borrar)</th>
+                        <th class="text-center">Mostrar</th>
+                        <th class="text-center">Detalle</th>
+                        <th class="text-center">Alta</th>
+                        <th class="text-center">Editar</th>
+                        <th class="text-center">Eliminar</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {{-- Iterar sobre todos los módulos disponibles (Controlador pasa $modulos) --}}
                     @foreach ($modulos as $modulo)
-                    {{-- Obtener el permiso existente para este módulo y cargo --}}
-                    @php
-                        // $permisosActuales es un array indexado por modulo_id
-                        $permiso = $permisosActuales->get($modulo->id);
-                    @endphp
-
-                    <tr>
-                        <td class="fw-bold">{{ ucfirst($modulo->nombre) }}</td>
-
-                        {{-- Definición de Acciones (Las claves deben coincidir con las columnas de la tabla 'permisos') --}}
-                        @foreach (['mostrar', 'detalle', 'alta', 'editar', 'eliminar'] as $accion)
-                            <td class="text-center">
-                                <div class="form-check">
-                                    {{-- El nombre del input es crucial: nombre_accion[modulo_id] --}}
-                                    <input 
-                                        class="form-check-input" 
-                                        type="checkbox" 
-                                        name="{{ $accion }}[{{ $modulo->id }}]" 
-                                        value="1" 
-                                        id="check-{{ $modulo->id }}-{{ $accion }}"
-                                        {{-- Marcar si el permiso existe y la acción está activa (1) --}}
-                                        {{ ($permiso && $permiso->$accion) ? 'checked' : '' }}
-                                    >
-                                    <label class="form-check-label visually-hidden" for="check-{{ $modulo->id }}-{{ $accion }}">{{ ucfirst($accion) }}</label>
-                                </div>
-                            </td>
-                        @endforeach
-                    </tr>
+                        @php
+                            $permiso = $permisosActuales->get($modulo->id);
+                        @endphp
+                        <tr>
+                            <td class="fw-bold">{{ ucfirst($modulo->nombre) }}</td>
+                            @foreach (['mostrar', 'detalle', 'alta', 'editar', 'eliminar'] as $accion)
+                                <td class="text-center">
+                                    <div class="form-check d-flex justify-content-center">
+                                        <input 
+                                            class="form-check-input permission-checkbox" 
+                                            type="checkbox" 
+                                            name="{{ $accion }}[{{ $modulo->id }}]" 
+                                            value="1" 
+                                            id="check-{{ $modulo->id }}-{{ $accion }}"
+                                            {{ ($permiso && $permiso->$accion) ? 'checked' : '' }}
+                                        >
+                                        <label class="form-check-label visually-hidden" for="check-{{ $modulo->id }}-{{ $accion }}">{{ ucfirst($accion) }}</label>
+                                    </div>
+                                </td>
+                            @endforeach
+                        </tr>
                     @endforeach
                 </tbody>
             </table>
@@ -84,4 +80,28 @@
         </div>
     </form>
 </div>
+
+{{-- Script para el botón "Seleccionar/Deseleccionar Todos" --}}
+<script>
+    document.getElementById('toggle-all-permissions').addEventListener('click', function() {
+        const checkboxes = document.querySelectorAll('#permissions-table .permission-checkbox');
+        
+        // Determinar si todos están marcados actualmente
+        let allChecked = true;
+        checkboxes.forEach(function(checkbox) {
+            if (!checkbox.checked) {
+                allChecked = false;
+            }
+        });
+
+        // La nueva acción será lo contrario del estado actual
+        const newState = !allChecked; 
+
+        // Aplicar el nuevo estado a todos los checkboxes
+        checkboxes.forEach(function(checkbox) {
+            checkbox.checked = newState;
+        });
+    });
+</script>
 @endsection
+

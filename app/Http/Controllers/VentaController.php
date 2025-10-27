@@ -11,7 +11,8 @@ use App\Models\Inventario;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException; // Para manejo de errores
+use Illuminate\Validation\ValidationException;// Para manejo de errores
+use App\Models\Cliente; 
 
 class VentaController extends Controller
 {
@@ -40,9 +41,11 @@ class VentaController extends Controller
             })
             ->orderBy('nombre')
             ->get();
+
+        $clientes = Cliente::select('idCli', 'Nombre')->orderBy('Nombre')->get();
         
         // La vista espera estas variables
-        return view('ventas.tpv', compact('cajaAbierta', 'categorias', 'productos'));
+        return view('ventas.tpv', compact('cajaAbierta', 'categorias', 'productos','clientes'));
     }
 
     /**
@@ -130,7 +133,7 @@ class VentaController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             // Retorna un error genérico para AJAX
-            return response()->json(['message' => 'Error interno al procesar la venta: ' . $e->getMessage()], 500);
+            return response()->json(['message' => 'Error interno al procesar la venta. Verifique los logs.'], 500);
         }
     }
 }
