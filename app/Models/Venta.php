@@ -28,7 +28,7 @@ class Venta extends Model
      * @var array
      */
     protected $dates = [
-        'fecha_hora',
+        'fecha_hora' => 'datetime'
     ];
 
     /**

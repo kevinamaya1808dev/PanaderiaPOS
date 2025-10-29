@@ -46,7 +46,7 @@
             <div class="col-lg-4 d-flex flex-column border-start ps-4 h-100">
                 <h4 class="mb-3 text-danger"><i class="fas fa-shopping-cart me-2"></i> Orden Actual</h4>
                 
-                {{-- Cliente Editable con Dropdown --}}
+                {{-- Cliente Editable con Dropdown (SIN CAMBIOS) --}}
                 <div class="alert alert-info py-2 mb-3">
                       <div><small>Cajero: <strong>{{ Auth::user()->name }}</strong></small></div>
                       <hr class="my-1">
@@ -63,12 +63,12 @@
                       </div>
                  </div>
                 
-                {{-- Carrito y Pago --}}
+                {{-- Carrito y Pago (SIN CAMBIOS EN HTML) --}}
                 <div id="cart" class="flex-grow-1 overflow-auto border rounded p-3 mb-3 bg-light shadow-sm">
                      <p class="text-center text-muted empty-cart-message">Añada productos para comenzar la venta.</p>
                  </div>
                  <div class="border-top pt-3">
-                     {{-- Resumen Total --}}
+                     {{-- Resumen Total (SIN CAMBIOS) --}}
                      <div class="d-flex justify-content-between fw-bold mb-1">
                          <span>SUBTOTAL:</span>
                          <span id="subtotal">$0.00</span>
@@ -77,7 +77,7 @@
                          <span>TOTAL A PAGAR:</span>
                          <span id="total">$0.00</span>
                      </div>
-                     {{-- Botones --}}
+                     {{-- Botones (SIN CAMBIOS) --}}
                      <button id="process-payment" class="btn btn-success btn-lg w-100 mb-2 disabled" data-bs-toggle="modal" data-bs-target="#paymentModal">
                          <i class="fas fa-money-check-alt me-2"></i> Procesar Venta
                      </button>
@@ -91,22 +91,33 @@
     {{-- SI LA CAJA ESTÁ CERRADA (SIN CAMBIOS) --}}
     @else
          <div class="alert alert-danger text-center mx-auto mt-5 shadow" style="max-width: 600px;">
-              {{-- ... Mensaje de caja cerrada ... --}}
+              <h4 class="alert-heading"><i class="fas fa-exclamation-triangle me-2"></i> ¡Caja Cerrada!</h4>
+              <p>No se puede realizar ninguna venta hasta que abras la caja.</p>
+              <hr>
+              <a href="{{ route('cajas.index') }}" class="btn btn-danger">
+                  <i class="fas fa-box-open me-2"></i> Ir a Gestión de Caja para Abrir
+              </a>
           </div>
     @endif
 </div>
 
 {{-- MODAL PARA SELECCIONAR CLIENTE (SIN CAMBIOS) --}}
 <div class="modal fade" id="clienteModal" tabindex="-1" aria-labelledby="clienteModalLabel" aria-hidden="true">
-   {{-- ... (contenido sin cambios) ... --}}
    <div class="modal-dialog">
      <div class="modal-content">
-       {{-- ... --}}
+       <div class="modal-header">
+         <h5 class="modal-title" id="clienteModalLabel">Seleccionar o Crear Cliente</h5>
+         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+       </div>
+       <div class="modal-body">
+         <p>Buscador y formulario de creación rápida de cliente (pendiente).</p>
+         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Usar Público General</button>
+       </div>
      </div>
    </div>
 </div>
 
-{{-- ***** MODIFICADO: MODAL DE PAGO (Añadida opción Tarjeta y Folio) ***** --}}
+{{-- MODAL DE PAGO (SIN CAMBIOS EN HTML, solo la lógica JS se modifica) --}}
 <div class="modal fade" id="paymentModal" tabindex="-1" aria-labelledby="paymentModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -120,17 +131,17 @@
                     <div class="fs-1 fw-bolder text-danger" id="modal-total-display">$0.00</div>
                 </div>
                 
-                {{-- Método de Pago (Restaurada opción Tarjeta) --}}
+                {{-- Método de Pago --}}
                 <div class="mb-3">
                     <label for="modal-metodo-pago" class="form-label fw-bold">Método de Pago</label>
                     <select class="form-select form-select-lg" id="modal-metodo-pago">
                         <option value="efectivo" selected>Efectivo</option>
-                        <option value="tarjeta">Tarjeta</option> {{-- <-- RESTAURADO --}}
+                        <option value="tarjeta">Tarjeta</option> 
                     </select>
                 </div>
                 
-                {{-- Grupo para Efectivo (Monto Recibido y Cambio) --}}
-                <div id="efectivo-fields">
+                {{-- Grupo para Efectivo --}}
+                <div id="efectivo-fields"> 
                     <div class="mb-3" id="monto-recibido-group">
                         <label for="modal-monto-recibido" class="form-label fw-bold">Monto Recibido</label>
                         <div class="input-group input-group-lg">
@@ -144,8 +155,8 @@
                     </div>
                 </div>
 
-                {{-- NUEVO: Grupo para Tarjeta (Folio) --}}
-                <div class="mb-3" id="tarjeta-fields" style="display: none;"> {{-- Oculto por defecto --}}
+                {{-- Grupo para Tarjeta (Folio) --}}
+                <div class="mb-3" id="tarjeta-fields" style="display: none;"> 
                     <label for="modal-folio-pago" class="form-label fw-bold">Folio / Autorización</label>
                     <input type="text" class="form-control form-control-lg" id="modal-folio-pago" placeholder="Ingrese N° de autorización">
                 </div>
@@ -172,7 +183,7 @@
         let currentCategoryId = 'all'; 
         const clients = @json($clientes ?? []); 
         
-        // Referencias del DOM (Añadidas referencias de Tarjeta)
+        // Referencias del DOM (sin cambios)
         const cartDiv = document.getElementById('cart');
         const subtotalSpan = document.getElementById('subtotal');
         const totalSpan = document.getElementById('total');
@@ -195,10 +206,9 @@
         const modalMontoRecibido = document.getElementById('modal-monto-recibido');
         const modalCambioDisplay = document.getElementById('modal-cambio-display');
         const confirmPaymentBtn = document.getElementById('confirm-payment-btn');
-        const montoRecibidoGroup = document.getElementById('monto-recibido-group');
-        const cambioGroup = document.getElementById('cambio-group');
-        const tarjetaFields = document.getElementById('tarjeta-fields'); // <-- NUEVO
-        const modalFolioPago = document.getElementById('modal-folio-pago'); // <-- NUEVO
+        const efectivoFields = document.getElementById('efectivo-fields'); 
+        const tarjetaFields = document.getElementById('tarjeta-fields'); 
+        const modalFolioPago = document.getElementById('modal-folio-pago'); 
 
         // Función updateCartUI (sin cambios)
         function updateCartUI() {
@@ -370,9 +380,7 @@
              }
          }); }
 
-        // **** LÓGICA DEL MODAL DE PAGO (MODIFICADA para Tarjeta/Folio y Foco) ****
-        
-        // Al ABRIR el modal de pago
+        // Lógica del Modal de Pago (MODIFICADA para Tarjeta/Folio y Foco)
         if (paymentModalElement) {
             paymentModalElement.addEventListener('show.bs.modal', function() {
                  if (Object.keys(cart).length === 0) {
@@ -391,7 +399,8 @@
                  
                  // Foco automático
                  setTimeout(() => {
-                     if(modalMontoRecibido) {
+                     // Solo enfocar si el método es efectivo
+                     if(modalMetodoPago && modalMetodoPago.value === 'efectivo' && modalMontoRecibido) {
                          modalMontoRecibido.focus(); 
                      }
                  }, 150); // Retraso para esperar la animación del modal
@@ -402,11 +411,10 @@
         if (modalMetodoPago) { modalMetodoPago.addEventListener('change', togglePaymentFields); }
         
         function togglePaymentFields() { 
-             if (!modalMetodoPago || !montoRecibidoGroup || !cambioGroup || !tarjetaFields) return;
+             if (!modalMetodoPago || !efectivoFields || !tarjetaFields) return;
              const isCash = modalMetodoPago.value === 'efectivo';
              
-             montoRecibidoGroup.style.display = isCash ? 'block' : 'none';
-             cambioGroup.style.display = isCash ? 'block' : 'none';
+             efectivoFields.style.display = isCash ? 'block' : 'none';
              tarjetaFields.style.display = isCash ? 'none' : 'block'; // Mostrar/ocultar folio
              
              if (!isCash) {
@@ -414,6 +422,7 @@
                  if(modalMontoRecibido && totalSpan) modalMontoRecibido.value = totalSpan.textContent.replace('$', ''); 
                  calculateChange(); // Validar botón (basado en folio)
              } else {
+                  if(modalMontoRecibido) modalMontoRecibido.value = ''; // Limpiar monto si vuelve a efectivo
                   calculateChange(); // Validar botón (basado en monto)
              }
         }
@@ -430,18 +439,18 @@
              const total = parseFloat(totalSpan.textContent.replace('$', ''));
 
              if (metodo === 'efectivo') {
-                 const recibido = parseFloat(modalMontoRecibido.value) || 0;
+                 const recibido = modalMontoRecibido ? (parseFloat(modalMontoRecibido.value) || 0) : 0;
                  const cambio = recibido - total;
                  modalCambioDisplay.textContent = `$${Math.max(0, cambio).toFixed(2)}`; 
                  confirmPaymentBtn.disabled = (recibido < total); // Deshabilitado si el monto es menor
              } else if (metodo === 'tarjeta') {
                  modalCambioDisplay.textContent = '$0.00'; // No hay cambio
-                 const folio = modalFolioPago.value.trim();
+                 const folio = modalFolioPago ? modalFolioPago.value.trim() : '';
                  confirmPaymentBtn.disabled = (folio === ''); // Deshabilitado si el folio está vacío
              }
          }
         
-        // Evento para CONFIRMAR el PAGO (MODIFICADO: Lógica de Tarjeta/Efectivo)
+        // ***** MODIFICACIÓN: Evento para CONFIRMAR el PAGO (Añadida generación de ticket) *****
         if (confirmPaymentBtn) { 
             confirmPaymentBtn.addEventListener('click', async function() { 
                  if (Object.keys(cart).length === 0 || !totalSpan) return;
@@ -455,6 +464,7 @@
                  let montoEntregado = 0;
                  const folioTarjeta = modalFolioPago ? modalFolioPago.value.trim() : null;
 
+                 // (Lógica de validación de monto y folio SIN CAMBIOS)
                  if (metodoPago === 'efectivo') {
                      montoEntregado = Math.max(0, montoRecibido - total); 
                      if (montoRecibido < total) {
@@ -463,8 +473,8 @@
                          return; 
                      }
                  } else if (metodoPago === 'tarjeta') {
-                     montoRecibido = total; // Pago exacto
-                     if (!folioTarjeta) { // Validar folio
+                     montoRecibido = total; 
+                     if (!folioTarjeta) { 
                          alert('Por favor, ingrese el folio o número de autorización.');
                          if(modalFolioPago) modalFolioPago.focus();
                          return;
@@ -475,32 +485,43 @@
                      _token: csrfToken, cliente_id: selectedClientId, metodo_pago: metodoPago,
                      total: total, monto_recibido: montoRecibido, monto_entregado: montoEntregado,
                      detalles: detalles
-                     // 'folio': folioTarjeta // (Puedes añadir esto si tu VentaController lo espera)
                  };
 
                  this.disabled = true;
                  this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Procesando...';
+                 
                  try {
                      const response = await fetch("{{ route('ventas.store') }}", { 
                          method: 'POST',
                          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken },
                          body: JSON.stringify(payload)
                      });
-                     const result = await response.json();
+                     const result = await response.json(); // Esperar la respuesta JSON
 
                      if (response.ok) {
-                         let msg = `Venta ${result.venta_id || ''} procesada!`;
-                         if (metodoPago === 'efectivo') {
-                             msg += `\nCambio: $${montoEntregado.toFixed(2)}`;
-                         } else if (metodoPago === 'tarjeta') {
-                             msg += `\nFolio: ${folioTarjeta}`;
-                         }
-                         alert(msg);
+                         // ***** INICIO DE MODIFICACIÓN: Lógica del Ticket *****
+                         
+                         // 1. Mostrar alerta (Opcional)
+                         //let msg = `Venta ${result.venta_id || ''} procesada!`;
+                         //if (metodoPago === 'efectivo') {
+                            // msg += `\nCambio: $${montoEntregado.toFixed(2)}`;
+                         //}
+                         //alert(msg);
+                         
+                         // 1. Abrir el ticket PDF en una nueva pestaña
+                         // (Asegúrate de que la ruta 'ventas.ticket' exista en web.php)
+                         const ticketUrl = `{{ url('/ventas/ticket') }}/${result.venta_id}`;
+                         window.open(ticketUrl, '_blank');
+                         
+                         // 2. Limpiar y recargar
                          if(paymentModal) paymentModal.hide(); 
                          for (const id in cart) { delete cart[id]; }
                          updateSelectedClient(null, 'Público General'); 
                          updateCartUI();
                          window.location.reload(); 
+
+                         // ***** FIN DE MODIFICACIÓN *****
+                         
                      } else { 
                           let errMsg = result.message || 'Error.';
                           if (result.errors) { errMsg += '\nDetalles:\n'; for(const f in result.errors) {errMsg += `- ${result.errors[f].join(', ')}\n`;} }
@@ -516,6 +537,7 @@
                  }
              }); 
         }
+        // ***** FIN MODIFICACIÓN *****
 
         // Inicializar (sin cambios)
         updateCartUI();
@@ -531,4 +553,3 @@
 .fs-sm { /* ... */ } 
 </style>
 @endsection
-

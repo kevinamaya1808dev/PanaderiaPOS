@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;// Para manejo de errores
 use App\Models\Cliente; 
+use PDF;
 
 class VentaController extends Controller
 {
@@ -135,5 +136,23 @@ class VentaController extends Controller
             // Retorna un error genérico para AJAX
             return response()->json(['message' => 'Error interno al procesar la venta. Verifique los logs.'], 500);
         }
+    }
+        // ***** MÉTODO NUEVO PARA GENERAR EL TICKET PDF *****
+    /**
+     * Genera un PDF del ticket de venta.
+     */
+    public function generarTicketPDF(Venta $venta)
+    {
+        // Cargar las relaciones necesarias para el ticket
+        $venta->load('user', 'cliente', 'detalles.producto');
+
+        // Cargar la vista 'ticket_pdf' con los datos
+        $pdf = PDF::loadView('ventas.ticket_pdf', compact('venta'));
+        
+        // Configurar el tamaño (ej. 80mm de ancho para ticketera)
+        $pdf->setPaper([0, 0, 226.77, 800]); // Ancho 80mm, altura larga
+
+        // Mostrar el PDF en el navegador
+        return $pdf->stream('ticket_venta_' . $venta->id . '.pdf');
     }
 }

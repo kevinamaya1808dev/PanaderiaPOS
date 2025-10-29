@@ -193,5 +193,10 @@ Route::delete('categorias/{categoria}', [CategoriaController::class, 'destroy'])
     Route::post('ventas', [VentaController::class, 'store'])
         ->name('ventas.store')
         ->middleware('permiso:ventas,alta'); 
+    
+    //NUEVA RUTA PARA EL TICKET PDF 
+    Route::get('ventas/ticket/{venta}', [VentaController::class, 'generarTicketPDF'])
+        ->name('ventas.ticket')
+        ->middleware('permiso:ventas,mostrar'); // O el permiso que consideres
 
 });
