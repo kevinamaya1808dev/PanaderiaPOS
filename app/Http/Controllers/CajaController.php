@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Caja;
+use App\Models\Venta; // <-- Asegurar que Venta esté importado
 use App\Models\MovimientoCaja;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -23,6 +24,7 @@ class CajaController extends Controller
 
         $movimientos = collect();
         $saldoActual = 0;
+        $ventasEfectivo = 0; // <-- NUEVO: Inicializar variable para ventas en efectivo
 
         if ($cajaAbierta) {
             // Obtener sus movimientos manuales
@@ -30,26 +32,31 @@ class CajaController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->get();
 
-            // Calcular el saldo actual (Saldo Inicial + Movimientos)
+            // Calcular el saldo de movimientos manuales
             $saldoMovimientos = $movimientos->sum(function ($mov) {
                 return $mov->tipo === 'ingreso' ? $mov->monto : -$mov->monto;
             });
             
-            // Aquí se sumarían las ventas en efectivo si ya existieran
-            // $ventasEfectivo = Venta::where('caja_id', $cajaAbierta->id)->where('metodo_pago', 'efectivo')->sum('total');
+            // <-- NUEVO: Calcular Ventas en Efectivo desde la apertura de esta caja -->
+            $ventasEfectivo = Venta::where('user_id', Auth::id()) // Ventas del usuario actual
+                                    ->where('metodo_pago', 'efectivo') // SOLO EFECTIVO
+                                    ->where('fecha_hora', '>=', $cajaAbierta->fecha_hora_apertura) // Desde que abrió caja
+                                    // ->where('caja_id', $cajaAbierta->id) // Si tuvieras caja_id en Ventas, sería más preciso
+                                    ->sum('total');
             
-            $saldoActual = $cajaAbierta->saldo_inicial + $saldoMovimientos; // + $ventasEfectivo;
+            // <-- MODIFICADO: Añadir ventas en efectivo al saldo actual -->
+            $saldoActual = $cajaAbierta->saldo_inicial + $saldoMovimientos + $ventasEfectivo;
         }
 
-        return view('cajas.index', compact('cajaAbierta', 'movimientos', 'saldoActual'));
+        // <-- MODIFICADO: Pasar $ventasEfectivo a la vista -->
+        return view('cajas.index', compact('cajaAbierta', 'movimientos', 'saldoActual', 'ventasEfectivo'));
     }
 
     /**
-     * Abre una nueva caja.
+     * Abre una nueva caja (Sin cambios necesarios aquí).
      */
     public function abrirCaja(Request $request)
     {
-        // El middleware 'permiso:cajas,alta' protege esta función
         $request->validate([
             'saldo_inicial' => 'required|numeric|min:0',
         ]);
@@ -69,11 +76,10 @@ class CajaController extends Controller
     }
 
     /**
-     * Cierra la caja abierta.
+     * Cierra la caja abierta (Modificado para incluir ventas y crear movimiento).
      */
     public function cerrarCaja(Request $request)
     {
-        // El middleware 'permiso:cajas,eliminar' protege esta función
         $caja = Caja::where('user_id', Auth::id())
             ->where('estado', 'abierta')
             ->first();
@@ -82,23 +88,53 @@ class CajaController extends Controller
             return redirect()->route('cajas.index')->with('error', 'No se encontró ninguna caja abierta para cerrar.');
         }
 
-        // Calcular saldo final basado en movimientos (y ventas futuras)
-        $saldoMovimientos = MovimientoCaja::where('caja_id', $caja->id)->sum(function ($mov) {
-            return $mov->tipo === 'ingreso' ? $mov->monto : -$mov->monto;
-        });
-        
-        // Aquí se sumarían las ventas en efectivo
-        // $ventasEfectivo = Venta::where('caja_id', $caja->id)->where('metodo_pago', 'efectivo')->sum('total');
+        // <-- MODIFICADO: Usar transacción para asegurar atomicidad -->
+        DB::beginTransaction();
+        try {
+            // Calcular saldo de movimientos manuales
+            $saldoMovimientos = MovimientoCaja::where('caja_id', $caja->id)->sum(function ($mov) {
+                return $mov->tipo === 'ingreso' ? $mov->monto : -$mov->monto;
+            });
+            
+            // <-- MODIFICADO: Calcular Ventas en Efectivo para ESTA caja específica -->
+            $ventasEfectivo = Venta::where('user_id', Auth::id()) 
+                                    ->where('metodo_pago', 'efectivo')
+                                    ->where('fecha_hora', '>=', $caja->fecha_hora_apertura) // Desde apertura
+                                    ->where('fecha_hora', '<=', now()) // Hasta el cierre
+                                    // ->where('caja_id', $caja->id) // Si tuvieras caja_id en Ventas
+                                    ->sum('total');
 
-        $saldoCalculado = $caja->saldo_inicial + $saldoMovimientos; // + $ventasEfectivo;
+            // <-- MODIFICADO: Calcular saldo final incluyendo ventas en efectivo -->
+            $saldoCalculadoCierre = $caja->saldo_inicial + $saldoMovimientos + $ventasEfectivo;
 
-        // Actualizar el registro de caja
-        $caja->update([
-            'fecha_hora_cierre' => now(),
-            'saldo_final' => $saldoCalculado,
-            'estado' => 'cerrada',
-        ]);
+            // <-- NUEVO: Registrar las ventas en efectivo como un movimiento de caja al cerrar -->
+            if ($ventasEfectivo > 0) {
+                MovimientoCaja::create([
+                    'caja_id' => $caja->id,
+                    'tipo' => 'ingreso',
+                    'descripcion' => 'Ventas en Efectivo del Turno',
+                    'monto' => $ventasEfectivo,
+                    'metodo_pago' => 'sistema', // Indicar que es automático
+                    'created_at' => now(), // Asegurar timestamp
+                    'updated_at' => now(),
+                ]);
+            }
 
-        return redirect()->route('cajas.index')->with('success', 'Caja cerrada exitosamente. Saldo final registrado: $' . number_format($saldoCalculado, 2));
+            // Actualizar el registro de caja
+            $caja->update([
+                'fecha_hora_cierre' => now(),
+                'saldo_final' => $saldoCalculadoCierre, // Usar el saldo calculado que incluye ventas
+                'estado' => 'cerrada',
+            ]);
+
+            DB::commit(); // Confirmar transacción
+
+            return redirect()->route('cajas.index')->with('success', 'Caja cerrada exitosamente. Saldo final calculado: $' . number_format($saldoCalculadoCierre, 2));
+
+        } catch (\Exception $e) {
+            DB::rollBack(); // Revertir en caso de error
+            \Log::error("Error al cerrar caja: " . $e->getMessage()); // Loguear el error
+            return redirect()->route('cajas.index')->with('error', 'Ocurrió un error al cerrar la caja. Verifique los logs.');
+        }
     }
 }
