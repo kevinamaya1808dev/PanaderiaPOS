@@ -90,19 +90,31 @@ class CajaController extends Controller
 
         // <-- MODIFICADO: Usar transacción para asegurar atomicidad -->
         DB::beginTransaction();
+        
         try {
             // Calcular saldo de movimientos manuales
-            $saldoMovimientos = MovimientoCaja::where('caja_id', $caja->id)->sum(function ($mov) {
-                return $mov->tipo === 'ingreso' ? $mov->monto : -$mov->monto;
-            });
-            
+            // 1. Sumar todos los ingresos
+            $ingresosManuales = MovimientoCaja::where('caja_id', $caja->id)
+                ->where('tipo', 'ingreso')
+                ->sum('monto');
+
+            // 2. Sumar todos los egresos (todo lo que NO sea 'ingreso')
+            $egresosManuales = MovimientoCaja::where('caja_id', $caja->id)
+                ->where('tipo', '!=', 'ingreso')
+                ->sum('monto');
+
+            // 3. Calcular el saldo final de movimientos
+            $saldoMovimientos = $ingresosManuales - $egresosManuales;
+        
+            // <-- TODO EL CÓDIGO SIGUIENTE AHORA VA DENTRO DEL 'try' -->
+
             // <-- MODIFICADO: Calcular Ventas en Efectivo para ESTA caja específica -->
             $ventasEfectivo = Venta::where('user_id', Auth::id()) 
-                                    ->where('metodo_pago', 'efectivo')
-                                    ->where('fecha_hora', '>=', $caja->fecha_hora_apertura) // Desde apertura
-                                    ->where('fecha_hora', '<=', now()) // Hasta el cierre
-                                    // ->where('caja_id', $caja->id) // Si tuvieras caja_id en Ventas
-                                    ->sum('total');
+                ->where('metodo_pago', 'efectivo')
+                ->where('fecha_hora', '>=', $caja->fecha_hora_apertura) // Desde apertura
+                ->where('fecha_hora', '<=', now()) // Hasta el cierre
+                // ->where('caja_id', $caja->id) // Si tuvieras caja_id en Ventas
+                ->sum('total');
 
             // <-- MODIFICADO: Calcular saldo final incluyendo ventas en efectivo -->
             $saldoCalculadoCierre = $caja->saldo_inicial + $saldoMovimientos + $ventasEfectivo;
