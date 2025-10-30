@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Caja;
 use App\Models\Venta; // <-- Asegurar que Venta esté importado
-use App\Models\MovimientoCaja;
+use App\Models\MovimientoCaja; // <-- ¡IMPORTANTE AÑADIR ESTE!
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -25,15 +25,18 @@ class CajaController extends Controller
         $movimientos = collect();
         $saldoActual = 0;
         $ventasEfectivo = 0; // <-- NUEVO: Inicializar variable para ventas en efectivo
+        $saldoMovimientos = 0; // <-- AÑADIDO: Inicializar saldoMovimientos
 
         if ($cajaAbierta) {
             // Obtener sus movimientos manuales
             $movimientos = MovimientoCaja::where('caja_id', $cajaAbierta->id)
+                ->with('user') // <-- AÑADIDO: Cargar usuario aquí
                 ->orderBy('created_at', 'desc')
                 ->get();
 
             // Calcular el saldo de movimientos manuales
             $saldoMovimientos = $movimientos->sum(function ($mov) {
+                // Asumiendo que 'ingreso' suma y 'egreso' (u otro tipo) resta
                 return $mov->tipo === 'ingreso' ? $mov->monto : -$mov->monto;
             });
             
@@ -48,8 +51,14 @@ class CajaController extends Controller
             $saldoActual = $cajaAbierta->saldo_inicial + $saldoMovimientos + $ventasEfectivo;
         }
 
-        // <-- MODIFICADO: Pasar $ventasEfectivo a la vista -->
-        return view('cajas.index', compact('cajaAbierta', 'movimientos', 'saldoActual', 'ventasEfectivo'));
+        // <-- MODIFICADO: Pasar $ventasEfectivo y $saldoMovimientos a la vista -->
+        return view('cajas.index', compact(
+            'cajaAbierta', 
+            'movimientos', 
+            'saldoActual', 
+            'ventasEfectivo', 
+            'saldoMovimientos' // Pasar también el total de movimientos
+        ));
     }
 
     /**
@@ -123,6 +132,7 @@ class CajaController extends Controller
             if ($ventasEfectivo > 0) {
                 MovimientoCaja::create([
                     'caja_id' => $caja->id,
+                    'user_id' => Auth::id(), // <-- AÑADIDO: Guardar quién hizo el movimiento
                     'tipo' => 'ingreso',
                     'descripcion' => 'Ventas en Efectivo del Turno',
                     'monto' => $ventasEfectivo,
@@ -148,5 +158,43 @@ class CajaController extends Controller
             \Log::error("Error al cerrar caja: " . $e->getMessage()); // Loguear el error
             return redirect()->route('cajas.index')->with('error', 'Ocurrió un error al cerrar la caja. Verifique los logs.');
         }
+    }
+
+    // ===================================================================
+    // ============= ¡NUEVA FUNCIÓN PARA MOVIMIENTOS MANUALES! =============
+    // ===================================================================
+    /**
+     * Registra un movimiento manual (ingreso o egreso) en la caja abierta.
+     */
+    public function registrarMovimiento(Request $request)
+    {
+        $request->validate([
+            'caja_id' => 'required|exists:cajas,id',
+            'tipo' => 'required|in:ingreso,egreso', // Validar 'ingreso' o 'egreso'
+            'monto' => 'required|numeric|min:0.01', // Monto siempre positivo
+            'descripcion' => 'required|string|max:255',
+        ]);
+
+        // Doble chequeo: la caja debe estar abierta y pertenecer al usuario
+        $cajaAbierta = Caja::where('id', $request->caja_id)
+                           ->where('user_id', Auth::id())
+                           ->where('estado', 'abierta')
+                           ->first();
+                           
+        if (!$cajaAbierta) {
+            return redirect()->route('cajas.index')->with('error', 'Error: No se encontró tu caja abierta.');
+        }
+
+        // Guardamos el movimiento usando tu estructura de tabla
+        MovimientoCaja::create([
+            'caja_id' => $cajaAbierta->id,
+            'user_id' => Auth::id(), // Guardar quién lo hizo
+            'tipo' => $request->tipo, // 'ingreso' o 'egreso'
+            'descripcion' => $request->descripcion,
+            'monto' => $request->monto,
+            'metodo_pago' => 'Efectivo (Manual)', // Método de pago descriptivo
+        ]);
+        
+        return redirect()->route('cajas.index')->with('success', 'Movimiento manual registrado exitosamente.');
     }
 }

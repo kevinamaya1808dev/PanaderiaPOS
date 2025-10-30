@@ -33,6 +33,10 @@ Route::get('/', function () {
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
 
+Route::post('cajas/movimiento', [App\Http\Controllers\CajaController::class, 'registrarMovimiento'])
+    ->name('cajas.movimiento')
+    ->middleware('permiso:cajas,editar'); // O el permiso que uses para caja
+
 
 /*
 |--------------------------------------------------------------------------

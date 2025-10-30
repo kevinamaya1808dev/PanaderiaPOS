@@ -41,6 +41,7 @@ class Caja extends Model
     // Relación: Una caja tiene muchos movimientos (ventas, retiros, etc.)
     public function movimientos()
     {
-        return $this->hasMany(MovimientoCaja::class, 'caja_id');
+        return $this->hasMany(MovimientoCaja::class)->where('tipo', 'ajuste');
     }
+    
 }

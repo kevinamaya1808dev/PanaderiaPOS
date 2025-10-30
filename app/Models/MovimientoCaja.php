@@ -13,6 +13,7 @@ class MovimientoCaja extends Model
     
     protected $fillable = [
         'caja_id',
+        'user_id', // <-- ¡CORRECCIÓN! Añadir esta línea
         'tipo', // 'ingreso' o 'egreso'
         'descripcion',
         'monto',
@@ -28,9 +29,19 @@ class MovimientoCaja extends Model
         'monto' => 'decimal:2',
     ];
 
+    /**
+     * Obtiene el usuario que registró el movimiento.
+     */
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
+
     // Relación: El movimiento pertenece a una caja
     public function caja()
     {
         return $this->belongsTo(Caja::class, 'caja_id');
     }
+
+    
 }
