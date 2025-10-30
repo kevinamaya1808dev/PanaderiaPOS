@@ -44,7 +44,7 @@
                     <label for="metodo_pago" class="form-label">Método de Pago</label>
                     <select class="form-select @error('metodo_pago') is-invalid @enderror" id="metodo_pago" name="metodo_pago" required>
                         <option value="">Seleccione...</option>
-                        @foreach (['efectivo', 'tarjeta', 'credito', 'transferencia'] as $metodo)
+                        @foreach (['efectivo', 'tarjeta'] as $metodo)
                             <option value="{{ $metodo }}" {{ old('metodo_pago') == $metodo ? 'selected' : '' }}>
                                 {{ ucfirst($metodo) }}
                             </option>
