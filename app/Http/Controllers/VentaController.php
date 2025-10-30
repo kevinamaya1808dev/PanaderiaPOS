@@ -155,4 +155,16 @@ class VentaController extends Controller
         // Mostrar el PDF en el navegador
         return $pdf->stream('ticket_venta_' . $venta->id . '.pdf');
     }
+
+    /**
+     * Muestra una vista "envoltorio" que carga el PDF y fuerza la impresión.
+     */
+    public function imprimirTicket(Venta $venta)
+    {
+        // Generamos la URL a la ruta que SÍ crea el PDF
+        $urlPdf = route('ventas.ticket', $venta);
+        
+        // Pasamos esa URL a la nueva vista 'imprimir_pdf'
+        return view('ventas.imprimir_pdf', compact('urlPdf'));
+    }
 }

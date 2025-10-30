@@ -1,123 +1,121 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container-fluid" style="height: calc(100vh - 76px);"> 
+<div class="container-fluid" style="height: calc(100vh - 76px);">
     
-    @if ($cajaAbierta) 
+    @if ($cajaAbierta)
         <div class="row h-100">
-            <!-- 1. Columna de Productos (SIN CAMBIOS) -->
-            <div class="col-lg-8 d-flex flex-column h-100">
-                 <h4 class="mb-3 text-primary"><i class="fas fa-bread-slice me-2"></i> Productos Disponibles</h4>
-                 <div class="input-group mb-3 shadow-sm">
-                     <span class="input-group-text"><i class="fas fa-search"></i></span>
-                     <input type="search" id="product-search" class="form-control" placeholder="Buscar producto por nombre...">
-                 </div>
-                 <div class="d-flex mb-3 overflow-auto pb-2 border-bottom">
-                      <button class="btn btn-sm btn-outline-dark me-2 active category-filter" data-category-id="all">Todas</button>
-                      @foreach ($categorias as $cat)
-                          <button class="btn btn-sm btn-outline-secondary me-2 category-filter" data-category-id="{{ $cat->id }}">{{ $cat->nombre }}</button>
-                      @endforeach
-                  </div>
-                 <div class="row g-3 flex-grow-1 overflow-auto p-2 border rounded shadow-sm bg-white" id="product-list">
-                      @forelse ($productos as $producto)
-                          <div class="col-4 col-sm-3 col-md-2 product-item" data-category-id="{{ $producto->categoria_id }}">
-                              <div class="card h-100 product-card shadow-sm border-0" 
-                                   style="cursor: pointer;"
-                                   data-id="{{ $producto->id }}" 
-                                   data-name="{{ $producto->nombre }}" 
-                                   data-price="{{ $producto->precio }}"
-                                   data-stock="{{ $producto->inventario->stock ?? 0 }}">
-                                  <div class="card-body p-2 text-center d-flex flex-column justify-content-between">
-                                      <h6 class="card-title mb-1 fw-bold fs-sm product-name">{{ $producto->nombre }}</h6> 
-                                      <div>
-                                          <p class="card-text text-success fs-5 mb-0">${{ number_format($producto->precio, 2) }}</p>
-                                          <small class="text-muted product-stock">Stock: {{ $producto->inventario->stock ?? 0 }}</small>
-                                      </div>
-                                  </div>
-                              </div>
-                          </div>
-                      @empty
-                          <div class="alert alert-warning w-100 text-center">No hay productos con stock disponible para la venta.</div>
-                      @endforelse
-                  </div>
+            <!-- 1. Columna de Productos --><div class="col-lg-8 d-flex flex-column h-100">
+                <h4 class="mb-3 text-primary"><i class="fas fa-bread-slice me-2"></i> Productos Disponibles</h4>
+                <div class="input-group mb-3 shadow-sm">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    <input type="search" id="product-search" class="form-control" placeholder="Buscar producto por nombre...">
+                </div>
+                <div class="d-flex mb-3 overflow-auto pb-2 border-bottom">
+                    <button class="btn btn-sm btn-outline-dark me-2 active category-filter" data-category-id="all">Todas</button>
+                    @foreach ($categorias as $cat)
+                        <button class="btn btn-sm btn-outline-secondary me-2 category-filter" data-category-id="{{ $cat->id }}">{{ $cat->nombre }}</button>
+                    @endforeach
+                </div>
+                <div class="row g-3 flex-grow-1 overflow-auto p-2 border rounded shadow-sm bg-white" id="product-list">
+                    @forelse ($productos as $producto)
+                        <div class="col-4 col-sm-3 col-md-2 product-item" data-category-id="{{ $producto->categoria_id }}">
+                            <div class="card h-100 product-card shadow-sm border-0"
+                                style="cursor: pointer;"
+                                data-id="{{ $producto->id }}"
+                                data-name="{{ $producto->nombre }}"
+                                data-price="{{ $producto->precio }}"
+                                data-stock="{{ $producto->inventario->stock ?? 0 }}">
+                                <div class="card-body p-2 text-center d-flex flex-column justify-content-between">
+                                    <h6 class="card-title mb-1 fw-bold fs-sm product-name">{{ $producto->nombre }}</h6>
+                                    <div>
+                                        <p class="card-text text-success fs-5 mb-0">${{ number_format($producto->precio, 2) }}</p>
+                                        <small class="text-muted product-stock">Stock: {{ $producto->inventario->stock ?? 0 }}</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    @empty
+                        <div class="alert alert-warning w-100 text-center">No hay productos con stock disponible para la venta.</div>
+                    @endforelse
+                </div>
             </div>
 
-            <!-- 2. Columna del Carrito y Pago (SIN CAMBIOS) -->
-            <div class="col-lg-4 d-flex flex-column border-start ps-4 h-100">
+            <!-- 2. Columna del Carrito y Pago --><div class="col-lg-4 d-flex flex-column border-start ps-4 h-100">
                 <h4 class="mb-3 text-danger"><i class="fas fa-shopping-cart me-2"></i> Orden Actual</h4>
                 
-                {{-- Cliente Editable con Dropdown (SIN CAMBIOS) --}}
+                {{-- Cliente Editable con Dropdown --}}
                 <div class="alert alert-info py-2 mb-3">
-                      <div><small>Cajero: <strong>{{ Auth::user()->name }}</strong></small></div>
-                      <hr class="my-1">
-                      <div class="d-flex align-items-center">
-                          <small class="me-2">Cliente:</small> 
-                          <div class="input-group input-group-sm flex-grow-1">
-                              <input type="text" id="temporal-client-name" class="form-control" placeholder="Público General">
-                              <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Seleccionar Cliente Existente"></button>
-                              <ul class="dropdown-menu dropdown-menu-end" id="client-dropdown-menu" style="max-height: 200px; overflow-y: auto;">
-                                  <li><a class="dropdown-item select-client" href="#" data-client-id="" data-client-name="Público General">Público General</a></li>
-                                  <li><hr class="dropdown-divider"></li>
-                              </ul>
-                          </div>
-                      </div>
-                 </div>
+                    <div><small>Cajero: <strong>{{ Auth::user()->name }}</strong></small></div>
+                    <hr class="my-1">
+                    <div class="d-flex align-items-center">
+                        <small class="me-2">Cliente:</small>
+                        <div class="input-group input-group-sm flex-grow-1">
+                            <input type="text" id="temporal-client-name" class="form-control" placeholder="Público General">
+                            <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Seleccionar Cliente Existente"></button>
+                            <ul class="dropdown-menu dropdown-menu-end" id="client-dropdown-menu" style="max-height: 200px; overflow-y: auto;">
+                                <li><a class="dropdown-item select-client" href="#" data-client-id="" data-client-name="Público General">Público General</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
                 
-                {{-- Carrito y Pago (SIN CAMBIOS EN HTML) --}}
+                {{-- Carrito y Pago --}}
                 <div id="cart" class="flex-grow-1 overflow-auto border rounded p-3 mb-3 bg-light shadow-sm">
-                     <p class="text-center text-muted empty-cart-message">Añada productos para comenzar la venta.</p>
-                 </div>
-                 <div class="border-top pt-3">
-                     {{-- Resumen Total (SIN CAMBIOS) --}}
-                     <div class="d-flex justify-content-between fw-bold mb-1">
-                         <span>SUBTOTAL:</span>
-                         <span id="subtotal">$0.00</span>
-                     </div>
-                     <div class="d-flex justify-content-between fw-bold fs-5 text-danger mb-3">
-                         <span>TOTAL A PAGAR:</span>
-                         <span id="total">$0.00</span>
-                     </div>
-                     {{-- Botones (SIN CAMBIOS) --}}
-                     <button id="process-payment" class="btn btn-success btn-lg w-100 mb-2 disabled" data-bs-toggle="modal" data-bs-target="#paymentModal">
-                         <i class="fas fa-money-check-alt me-2"></i> Procesar Venta
-                     </button>
-                     <button id="cancel-order" class="btn btn-outline-danger w-100">
-                         <i class="fas fa-times-circle me-2"></i> Cancelar Orden
-                     </button>
-                 </div>
+                    <p class="text-center text-muted empty-cart-message">Añada productos para comenzar la venta.</p>
+                </div>
+                <div class="border-top pt-3">
+                    {{-- Resumen Total --}}
+                    <div class="d-flex justify-content-between fw-bold mb-1">
+                        <span>SUBTOTAL:</span>
+                        <span id="subtotal">$0.00</span>
+                    </div>
+                    <div class="d-flex justify-content-between fw-bold fs-5 text-danger mb-3">
+                        <span>TOTAL A PAGAR:</span>
+                        <span id="total">$0.00</span>
+                    </div>
+                    {{-- Botones --}}
+                    <button id="process-payment" class="btn btn-success btn-lg w-100 mb-2 disabled" data-bs-toggle="modal" data-bs-target="#paymentModal">
+                        <i class="fas fa-money-check-alt me-2"></i> Procesar Venta
+                    </button>
+                    <button id="cancel-order" class="btn btn-outline-danger w-100">
+                        <i class="fas fa-times-circle me-2"></i> Cancelar Orden
+                    </button>
+                </div>
             </div>
         </div>
 
-    {{-- SI LA CAJA ESTÁ CERRADA (SIN CAMBIOS) --}}
+    {{-- SI LA CAJA ESTÁ CERRADA --}}
     @else
-         <div class="alert alert-danger text-center mx-auto mt-5 shadow" style="max-width: 600px;">
-              <h4 class="alert-heading"><i class="fas fa-exclamation-triangle me-2"></i> ¡Caja Cerrada!</h4>
-              <p>No se puede realizar ninguna venta hasta que abras la caja.</p>
-              <hr>
-              <a href="{{ route('cajas.index') }}" class="btn btn-danger">
-                  <i class="fas fa-box-open me-2"></i> Ir a Gestión de Caja para Abrir
-              </a>
-          </div>
+        <div class="alert alert-danger text-center mx-auto mt-5 shadow" style="max-width: 600px;">
+            <h4 class="alert-heading"><i class="fas fa-exclamation-triangle me-2"></i> ¡Caja Cerrada!</h4>
+            <p>No se puede realizar ninguna venta hasta que abras la caja.</p>
+            <hr>
+            <a href="{{ route('cajas.index') }}" class="btn btn-danger">
+                <i class="fas fa-box-open me-2"></i> Ir a Gestión de Caja para Abrir
+            </a>
+        </div>
     @endif
 </div>
 
-{{-- MODAL PARA SELECCIONAR CLIENTE (SIN CAMBIOS) --}}
+{{-- MODAL PARA SELECCIONAR CLIENTE --}}
 <div class="modal fade" id="clienteModal" tabindex="-1" aria-labelledby="clienteModalLabel" aria-hidden="true">
-   <div class="modal-dialog">
-     <div class="modal-content">
-       <div class="modal-header">
-         <h5 class="modal-title" id="clienteModalLabel">Seleccionar o Crear Cliente</h5>
-         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-       </div>
-       <div class="modal-body">
-         <p>Buscador y formulario de creación rápida de cliente (pendiente).</p>
-         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Usar Público General</button>
-       </div>
-     </div>
-   </div>
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="clienteModalLabel">Seleccionar o Crear Cliente</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Buscador y formulario de creación rápida de cliente (pendiente).</p>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Usar Público General</button>
+            </div>
+        </div>
+    </div>
 </div>
 
-{{-- MODAL DE PAGO (SIN CAMBIOS EN HTML, solo la lógica JS se modifica) --}}
+{{-- MODAL DE PAGO --}}
 <div class="modal fade" id="paymentModal" tabindex="-1" aria-labelledby="paymentModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -136,12 +134,12 @@
                     <label for="modal-metodo-pago" class="form-label fw-bold">Método de Pago</label>
                     <select class="form-select form-select-lg" id="modal-metodo-pago">
                         <option value="efectivo" selected>Efectivo</option>
-                        <option value="tarjeta">Tarjeta</option> 
+                        <option value="tarjeta">Tarjeta</option>
                     </select>
                 </div>
                 
                 {{-- Grupo para Efectivo --}}
-                <div id="efectivo-fields"> 
+                <div id="efectivo-fields">
                     <div class="mb-3" id="monto-recibido-group">
                         <label for="modal-monto-recibido" class="form-label fw-bold">Monto Recibido</label>
                         <div class="input-group input-group-lg">
@@ -156,7 +154,7 @@
                 </div>
 
                 {{-- Grupo para Tarjeta (Folio) --}}
-                <div class="mb-3" id="tarjeta-fields" style="display: none;"> 
+                <div class="mb-3" id="tarjeta-fields" style="display: none;">
                     <label for="modal-folio-pago" class="form-label fw-bold">Folio / Autorización</label>
                     <input type="text" class="form-control form-control-lg" id="modal-folio-pago" placeholder="Ingrese N° de autorización">
                 </div>
@@ -164,7 +162,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-success btn-lg" id="confirm-payment-btn" disabled> 
+                <button type="button" class="btn btn-success btn-lg" id="confirm-payment-btn" disabled>
                     <i class="fas fa-check-circle me-2"></i> Confirmar Pago
                 </button>
             </div>
@@ -173,373 +171,360 @@
 </div>
 {{-- ***** FIN MODAL DE PAGO ***** --}}
 
+{{-- EL IFRAME NO ES NECESARIO SI IMPRIMIMOS EL PDF DIRECTO --}}
+{{-- <iframe id="print-frame" name="printFrame" 
+    style="position: absolute; top: -9999px; left: -9999px; width: 1px; height: 1px; visibility: hidden; border: 0;">
+</iframe> --}}
+
 
 <script>
-    // Asegurarse de que TODO el código JS esté dentro de este listener
     document.addEventListener('DOMContentLoaded', function() {
-        // Variables de Estado (sin cambios)
-        const cart = {}; 
-        let selectedClientId = null; 
-        let currentCategoryId = 'all'; 
-        const clients = @json($clientes ?? []); 
+        // Variables de Estado
+        const cart = {};
+        let selectedClientId = null;
+        let currentCategoryId = 'all';
+        const clients = @json($clientes ?? []);
         
-        // Referencias del DOM (sin cambios)
+        // Referencias del DOM
         const cartDiv = document.getElementById('cart');
         const subtotalSpan = document.getElementById('subtotal');
         const totalSpan = document.getElementById('total');
-        const processButton = document.getElementById('process-payment'); 
+        const processButton = document.getElementById('process-payment');
         const cancelButton = document.getElementById('cancel-order');
-        const temporalClientInput = document.getElementById('temporal-client-name'); 
-        const clientDropdownMenu = document.getElementById('client-dropdown-menu'); 
+        const temporalClientInput = document.getElementById('temporal-client-name');
+        const clientDropdownMenu = document.getElementById('client-dropdown-menu');
         const productListDiv = document.getElementById('product-list');
         const categoryFilters = document.querySelectorAll('.category-filter');
-        const searchInput = document.getElementById('product-search'); 
+        const searchInput = document.getElementById('product-search');
         const csrfToken = document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').content : '';
         const emptyCartMessageHTML = '<p class="text-center text-muted empty-cart-message">Añada productos para comenzar la venta.</p>';
         const paymentModalElement = document.getElementById('paymentModal');
         let paymentModal = null;
-        if (paymentModalElement && typeof bootstrap !== 'undefined') { 
-             paymentModal = new bootstrap.Modal(paymentModalElement); 
+        if (paymentModalElement && typeof bootstrap !== 'undefined') {
+             paymentModal = new bootstrap.Modal(paymentModalElement);
         }
         const modalTotalDisplay = document.getElementById('modal-total-display');
         const modalMetodoPago = document.getElementById('modal-metodo-pago');
         const modalMontoRecibido = document.getElementById('modal-monto-recibido');
         const modalCambioDisplay = document.getElementById('modal-cambio-display');
         const confirmPaymentBtn = document.getElementById('confirm-payment-btn');
-        const efectivoFields = document.getElementById('efectivo-fields'); 
-        const tarjetaFields = document.getElementById('tarjeta-fields'); 
-        const modalFolioPago = document.getElementById('modal-folio-pago'); 
+        const efectivoFields = document.getElementById('efectivo-fields');
+        const tarjetaFields = document.getElementById('tarjeta-fields');
+        const modalFolioPago = document.getElementById('modal-folio-pago');
 
-        // Función updateCartUI (sin cambios)
         function updateCartUI() {
-             let subtotal = 0;
-             let itemCount = 0;
-             if (!cartDiv) { console.error("Elemento cartDiv no encontrado."); return; } 
-             cartDiv.innerHTML = ''; 
-             
-             for (const id in cart) { 
-                 const item = cart[id];
-                 const itemTotal = item.price * item.qty;
-                 subtotal += itemTotal;
-                 itemCount++;
-                 const itemElement = document.createElement('div');
-                 itemElement.className = 'd-flex justify-content-between border-bottom py-2 align-items-center cart-item';
-                 itemElement.innerHTML = `<div class="flex-grow-1 me-2"><span class="badge bg-dark me-2">${item.qty}x</span><span class="fw-bold">${item.name}</span></div><div class="d-flex align-items-center"><button class="btn btn-sm btn-outline-danger me-2 remove-item" data-id="${id}" title="Restar">-</button><span class="fw-bold me-2" style="min-width: 60px; text-align: right;">$${itemTotal.toFixed(2)}</span><button class="btn btn-sm btn-outline-success add-item" data-id="${id}" title="Añadir">+</button></div>`;
-                 cartDiv.appendChild(itemElement);
-             }
+            let subtotal = 0;
+            let itemCount = 0;
+            if (!cartDiv) { console.error("Elemento cartDiv no encontrado."); return; }
+            cartDiv.innerHTML = '';
+            
+            for (const id in cart) {
+                const item = cart[id];
+                const itemTotal = item.price * item.qty;
+                subtotal += itemTotal;
+                itemCount++;
+                const itemElement = document.createElement('div');
+                itemElement.className = 'd-flex justify-content-between border-bottom py-2 align-items-center cart-item';
+                itemElement.innerHTML = `<div class="flex-grow-1 me-2"><span class="badge bg-dark me-2">${item.qty}x</span><span class="fw-bold">${item.name}</span></div><div class="d-flex align-items-center"><button class="btn btn-sm btn-outline-danger me-2 remove-item" data-id="${id}" title="Restar">-</button><span class="fw-bold me-2" style="min-width: 60px; text-align: right;">$${itemTotal.toFixed(2)}</span><button class="btn btn-sm btn-outline-success add-item" data-id="${id}" title="Añadir">+</button></div>`;
+                cartDiv.appendChild(itemElement);
+            }
 
-             if (itemCount === 0) { 
-                 if (!cartDiv.querySelector('.cart-item')) { cartDiv.innerHTML = emptyCartMessageHTML; }
-                 if (processButton) processButton.classList.add('disabled');
-             } else { 
-                 const emptyMsg = cartDiv.querySelector('.empty-cart-message');
-                 if(emptyMsg) emptyMsg.remove();
-                 if (processButton) processButton.classList.remove('disabled');
-             }
+            if (itemCount === 0) {
+                if (!cartDiv.querySelector('.cart-item')) { cartDiv.innerHTML = emptyCartMessageHTML; }
+                if (processButton) processButton.classList.add('disabled');
+            } else {
+                const emptyMsg = cartDiv.querySelector('.empty-cart-message');
+                if(emptyMsg) emptyMsg.remove();
+                if (processButton) processButton.classList.remove('disabled');
+            }
 
-             if (subtotalSpan) subtotalSpan.textContent = `$${subtotal.toFixed(2)}`;
-             if (totalSpan) totalSpan.textContent = `$${subtotal.toFixed(2)}`;
-             if (modalTotalDisplay) modalTotalDisplay.textContent = `$${subtotal.toFixed(2)}`; 
-         }
+            if (subtotalSpan) subtotalSpan.textContent = `$${subtotal.toFixed(2)}`;
+            if (totalSpan) totalSpan.textContent = `$${subtotal.toFixed(2)}`;
+            if (modalTotalDisplay) modalTotalDisplay.textContent = `$${subtotal.toFixed(2)}`;
+        }
 
-        // Función addItem (sin cambios)
         function addItem(id, name, price, stock) {
-            stock = parseInt(stock) || 0; 
+            stock = parseInt(stock) || 0;
             if (stock <= 0) {
-                 const cardElement = productListDiv ? productListDiv.querySelector(`.product-card[data-id="${id}"]`) : null;
-                 if(cardElement) {
-                      cardElement.style.opacity = '0.5'; 
-                      cardElement.style.cursor = 'not-allowed'; 
-                 }
-                 return; 
-             }
+                const cardElement = productListDiv ? productListDiv.querySelector(`.product-card[data-id="${id}"]`) : null;
+                if(cardElement) {
+                    cardElement.style.opacity = '0.5';
+                    cardElement.style.cursor = 'not-allowed';
+                }
+                return;
+            }
             
             if (cart[id]) {
-                if (cart[id].qty < stock) { 
+                if (cart[id].qty < stock) {
                     cart[id].qty++;
                 } else {
                     alert(`No puedes añadir más de ${stock} unidades de ${name}.`);
                 }
             } else {
-                 cart[id] = { name, price, qty: 1, stock };
+                cart[id] = { name, price, qty: 1, stock };
             }
             updateCartUI();
         }
         
-        // Función removeItem (sin cambios)
         function removeItem(id) {
             if (cart[id]) {
                 cart[id].qty--;
                 if (cart[id].qty <= 0) {
-                    delete cart[id]; 
+                    delete cart[id];
                 }
             }
             updateCartUI();
         }
 
-        // Eventos del carrito, añadir producto (sin cambios)
-         if (cartDiv) { cartDiv.addEventListener('click', function(e) { 
-             const target = e.target;
-             if (target.classList.contains('add-item')) {
-                 const id = target.dataset.id;
-                 const item = cart[id];
-                 if (item) addItem(id, item.name, item.price, item.stock);
-             } else if (target.classList.contains('remove-item')) {
-                 const id = target.dataset.id;
-                 removeItem(id);
-             }
-         }); }
-         if (productListDiv) { productListDiv.addEventListener('click', function(e) { 
-             const card = e.target.closest('.product-card');
-             if (card) {
-                 const id = card.dataset.id;
-                 const price = parseFloat(card.dataset.price);
-                 const name = card.dataset.name;
-                 const stock = parseInt(card.dataset.stock);
-                 addItem(id, name, price, stock); 
-             }
-         }); }
+         if (cartDiv) { cartDiv.addEventListener('click', function(e) {
+            const target = e.target;
+            if (target.classList.contains('add-item')) {
+                const id = target.dataset.id;
+                const item = cart[id];
+                if (item) addItem(id, item.name, item.price, item.stock);
+            } else if (target.classList.contains('remove-item')) {
+                const id = target.dataset.id;
+                removeItem(id);
+            }
+        }); }
+         if (productListDiv) { productListDiv.addEventListener('click', function(e) {
+            const card = e.target.closest('.product-card');
+            if (card) {
+                const id = card.dataset.id;
+                const price = parseFloat(card.dataset.price);
+                const name = card.dataset.name;
+                const stock = parseInt(card.dataset.stock);
+                addItem(id, name, price, stock);
+            }
+        }); }
 
-        // Funciones filterProducts, populateClientDropdown, updateSelectedClient (sin cambios)
-        function filterProducts() { 
-             const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : ''; 
-             const productItems = productListDiv ? productListDiv.querySelectorAll('.product-item') : [];
-             productItems.forEach(item => {
-                 const productNameElement = item.querySelector('.product-name');
-                 const productName = productNameElement ? productNameElement.textContent.toLowerCase() : '';
-                 const itemCategoryId = item.dataset.categoryId;
-                 const categoryMatch = (currentCategoryId === 'all' || itemCategoryId === currentCategoryId);
-                 const searchMatch = (searchTerm === '' || productName.includes(searchTerm));
-                 item.style.display = (categoryMatch && searchMatch) ? 'block' : 'none'; 
-             });
-         }
-        categoryFilters.forEach(button => { 
+        function filterProducts() {
+            const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+            const productItems = productListDiv ? productListDiv.querySelectorAll('.product-item') : [];
+            productItems.forEach(item => {
+                const productNameElement = item.querySelector('.product-name');
+                const productName = productNameElement ? productNameElement.textContent.toLowerCase() : '';
+                const itemCategoryId = item.dataset.categoryId;
+                const categoryMatch = (currentCategoryId === 'all' || itemCategoryId === currentCategoryId);
+                const searchMatch = (searchTerm === '' || productName.includes(searchTerm));
+                item.style.display = (categoryMatch && searchMatch) ? 'block' : 'none';
+            });
+        }
+        categoryFilters.forEach(button => {
             button.addEventListener('click', function() {
                 categoryFilters.forEach(btn => {btn.classList.remove('active', 'btn-outline-dark'); btn.classList.add('btn-outline-secondary');});
                 this.classList.add('active', 'btn-outline-dark');
                 this.classList.remove('btn-outline-secondary');
                 currentCategoryId = this.dataset.categoryId;
-                filterProducts(); 
+                filterProducts();
             });
-         });
+        });
         if (searchInput) { searchInput.addEventListener('input', filterProducts); }
-        function populateClientDropdown() { 
-             if (!clientDropdownMenu) return; 
-             const items = clientDropdownMenu.querySelectorAll('li:not(:first-child):not(:nth-child(2))');
-             items.forEach(item => item.remove());
-             if (clients && clients.length > 0) { 
-                 clients.forEach(client => {
-                     if (client.idCli !== 1) { 
-                         const li = document.createElement('li');
-                         const a = document.createElement('a');
-                         a.className = 'dropdown-item select-client';
-                         a.href = '#';
-                         a.dataset.clientId = client.idCli; 
-                         a.dataset.clientName = client.Nombre; 
-                         a.textContent = client.Nombre;
-                         li.appendChild(a);
-                         clientDropdownMenu.appendChild(li);
-                     }
-                 });
-             } else {
-                 const li = document.createElement('li');
-                 li.innerHTML = '<span class="dropdown-item text-muted">No hay clientes</span>';
-                 clientDropdownMenu.appendChild(li);
-             }
-         }
-        function updateSelectedClient(id, name) { 
-             selectedClientId = id ? parseInt(id) : null;
-             if(temporalClientInput){
-                 temporalClientInput.value = (id || name === 'Público General') ? name : ''; 
-                 temporalClientInput.placeholder = 'Público General'; 
-                 if (!id && name === 'Público General') { 
-                     temporalClientInput.value = '';
-                 }
-             }
-         }
-        if(clientDropdownMenu){ clientDropdownMenu.addEventListener('click', function(e) { 
-             e.preventDefault();
-             if (e.target.classList.contains('select-client')) {
-                 const clientId = e.target.dataset.clientId;
-                 const clientName = e.target.dataset.clientName;
-                 updateSelectedClient(clientId, clientName);
-             }
-         }); }
-        if(temporalClientInput){ temporalClientInput.addEventListener('input', function() { 
-             const typedName = this.value.trim();
-             const existingClient = clients.find(c => c.Nombre.toLowerCase() === typedName.toLowerCase());
-             selectedClientId = existingClient ? existingClient.idCli : null; 
-         }); }
+        function populateClientDropdown() {
+            if (!clientDropdownMenu) return;
+            const items = clientDropdownMenu.querySelectorAll('li:not(:first-child):not(:nth-child(2))');
+            items.forEach(item => item.remove());
+            if (clients && clients.length > 0) {
+                clients.forEach(client => {
+                    if (client.idCli !== 1) { // Asumiendo que el cliente ID 1 es "Público General"
+                        const li = document.createElement('li');
+                        const a = document.createElement('a');
+                        a.className = 'dropdown-item select-client';
+                        a.href = '#';
+                        a.dataset.clientId = client.idCli;
+                        a.dataset.clientName = client.Nombre;
+                        a.textContent = client.Nombre;
+                        li.appendChild(a);
+                        clientDropdownMenu.appendChild(li);
+                    }
+                });
+            } else {
+                const li = document.createElement('li');
+                li.innerHTML = '<span class="dropdown-item text-muted">No hay clientes</span>';
+                clientDropdownMenu.appendChild(li);
+            }
+        }
+        function updateSelectedClient(id, name) {
+            selectedClientId = id ? parseInt(id) : null;
+            if(temporalClientInput){
+                temporalClientInput.value = (id || name === 'Público General') ? name : '';
+                temporalClientInput.placeholder = 'Público General';
+                if (!id && name === 'Público General') {
+                    temporalClientInput.value = '';
+                }
+            }
+        }
+        if(clientDropdownMenu){ clientDropdownMenu.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (e.target.classList.contains('select-client')) {
+                const clientId = e.target.dataset.clientId;
+                const clientName = e.target.dataset.clientName;
+                updateSelectedClient(clientId, clientName);
+            }
+        }); }
+        if(temporalClientInput){ temporalClientInput.addEventListener('input', function() {
+            const typedName = this.value.trim();
+            const existingClient = clients.find(c => c.Nombre.toLowerCase() === typedName.toLowerCase());
+            selectedClientId = existingClient ? existingClient.idCli : null;
+        }); }
         
-        // Evento cancelar orden (sin cambios)
-         if(cancelButton){ cancelButton.addEventListener('click', function() { 
-             if (Object.keys(cart).length > 0 && confirm('¿Cancelar orden y vaciar carrito?')) {
-                 for (const id in cart) { delete cart[id]; }
-                 updateSelectedClient(null, 'Público General'); 
-                 updateCartUI();
-             }
-         }); }
+         if(cancelButton){ cancelButton.addEventListener('click', function() {
+            if (Object.keys(cart).length > 0 && confirm('¿Cancelar orden y vaciar carrito?')) {
+                for (const id in cart) { delete cart[id]; }
+                updateSelectedClient(null, 'Público General');
+                updateCartUI();
+            }
+        }); }
 
-        // Lógica del Modal de Pago (MODIFICADA para Tarjeta/Folio y Foco)
+        // Lógica del Modal de Pago
         if (paymentModalElement) {
             paymentModalElement.addEventListener('show.bs.modal', function() {
-                 if (Object.keys(cart).length === 0) {
-                     if(paymentModal) paymentModal.hide(); 
-                     return;
-                 }
-                 
-                 // Limpiar campos
-                 if(modalMontoRecibido) modalMontoRecibido.value = ''; 
-                 if(modalMontoRecibido) modalMontoRecibido.placeholder = '0.00';
-                 if(modalFolioPago) modalFolioPago.value = ''; // Limpiar folio
-                 if(modalMetodoPago) modalMetodoPago.value = 'efectivo'; // Resetear a efectivo
-                 
-                 togglePaymentFields(); // Mostrar/Ocultar campos
-                 calculateChange(); // Calcular estado inicial
-                 
-                 // Foco automático
-                 setTimeout(() => {
-                     // Solo enfocar si el método es efectivo
-                     if(modalMetodoPago && modalMetodoPago.value === 'efectivo' && modalMontoRecibido) {
-                         modalMontoRecibido.focus(); 
-                     }
-                 }, 150); // Retraso para esperar la animación del modal
+                if (Object.keys(cart).length === 0) {
+                    if(paymentModal) paymentModal.hide();
+                    return;
+                }
+                
+                if(modalMontoRecibido) modalMontoRecibido.value = '';
+                if(modalMontoRecibido) modalMontoRecibido.placeholder = '0.00';
+                if(modalFolioPago) modalFolioPago.value = '';
+                if(modalMetodoPago) modalMetodoPago.value = 'efectivo';
+                
+                togglePaymentFields();
+                calculateChange();
+                
+                setTimeout(() => {
+                    if(modalMetodoPago && modalMetodoPago.value === 'efectivo' && modalMontoRecibido) {
+                        modalMontoRecibido.focus();
+                    }
+                }, 150);
             });
         }
 
-        // Mostrar/ocultar campos de efectivo/tarjeta
         if (modalMetodoPago) { modalMetodoPago.addEventListener('change', togglePaymentFields); }
         
-        function togglePaymentFields() { 
-             if (!modalMetodoPago || !efectivoFields || !tarjetaFields) return;
-             const isCash = modalMetodoPago.value === 'efectivo';
-             
-             efectivoFields.style.display = isCash ? 'block' : 'none';
-             tarjetaFields.style.display = isCash ? 'none' : 'block'; // Mostrar/ocultar folio
-             
-             if (!isCash) {
-                 // Si es tarjeta, poner el total exacto y validar
-                 if(modalMontoRecibido && totalSpan) modalMontoRecibido.value = totalSpan.textContent.replace('$', ''); 
-                 calculateChange(); // Validar botón (basado en folio)
-             } else {
-                  if(modalMontoRecibido) modalMontoRecibido.value = ''; // Limpiar monto si vuelve a efectivo
-                  calculateChange(); // Validar botón (basado en monto)
-             }
+        function togglePaymentFields() {
+            if (!modalMetodoPago || !efectivoFields || !tarjetaFields) return;
+            const isCash = modalMetodoPago.value === 'efectivo';
+            
+            efectivoFields.style.display = isCash ? 'block' : 'none';
+            tarjetaFields.style.display = isCash ? 'none' : 'block';
+            
+            if (!isCash) {
+                if(modalMontoRecibido && totalSpan) modalMontoRecibido.value = totalSpan.textContent.replace('$', '');
+                calculateChange();
+            } else {
+                 if(modalMontoRecibido) modalMontoRecibido.value = '';
+                 calculateChange();
+            }
         }
 
-        // Validar botón al escribir en Monto Recibido
         if (modalMontoRecibido) { modalMontoRecibido.addEventListener('input', calculateChange); }
-        // Validar botón al escribir en Folio
-        if (modalFolioPago) { modalFolioPago.addEventListener('input', calculateChange); } 
+        if (modalFolioPago) { modalFolioPago.addEventListener('input', calculateChange); }
         
-        function calculateChange() { 
-             if (!modalMetodoPago || !modalCambioDisplay || !confirmPaymentBtn || !totalSpan) return; 
+        function calculateChange() {
+            if (!modalMetodoPago || !modalCambioDisplay || !confirmPaymentBtn || !totalSpan) return;
 
-             const metodo = modalMetodoPago.value;
-             const total = parseFloat(totalSpan.textContent.replace('$', ''));
+            const metodo = modalMetodoPago.value;
+            const total = parseFloat(totalSpan.textContent.replace('$', ''));
 
-             if (metodo === 'efectivo') {
-                 const recibido = modalMontoRecibido ? (parseFloat(modalMontoRecibido.value) || 0) : 0;
-                 const cambio = recibido - total;
-                 modalCambioDisplay.textContent = `$${Math.max(0, cambio).toFixed(2)}`; 
-                 confirmPaymentBtn.disabled = (recibido < total); // Deshabilitado si el monto es menor
-             } else if (metodo === 'tarjeta') {
-                 modalCambioDisplay.textContent = '$0.00'; // No hay cambio
-                 const folio = modalFolioPago ? modalFolioPago.value.trim() : '';
-                 confirmPaymentBtn.disabled = (folio === ''); // Deshabilitado si el folio está vacío
-             }
-         }
-        
-        // ***** MODIFICACIÓN: Evento para CONFIRMAR el PAGO (Añadida generación de ticket) *****
-        if (confirmPaymentBtn) { 
-            confirmPaymentBtn.addEventListener('click', async function() { 
-                 if (Object.keys(cart).length === 0 || !totalSpan) return;
-
-                 const detalles = Object.keys(cart).map(id => ({ 
-                    producto_id: id, cantidad: cart[id].qty, precio_unitario: cart[id].price, importe: cart[id].price * cart[id].qty 
-                 }));
-                 const total = parseFloat(totalSpan.textContent.replace('$', ''));
-                 const metodoPago = modalMetodoPago ? modalMetodoPago.value : 'efectivo';
-                 let montoRecibido = modalMontoRecibido ? (parseFloat(modalMontoRecibido.value) || 0) : total;
-                 let montoEntregado = 0;
-                 const folioTarjeta = modalFolioPago ? modalFolioPago.value.trim() : null;
-
-                 // (Lógica de validación de monto y folio SIN CAMBIOS)
-                 if (metodoPago === 'efectivo') {
-                     montoEntregado = Math.max(0, montoRecibido - total); 
-                     if (montoRecibido < total) {
-                         alert('Monto recibido insuficiente.');
-                         if(modalMontoRecibido) modalMontoRecibido.focus();
-                         return; 
-                     }
-                 } else if (metodoPago === 'tarjeta') {
-                     montoRecibido = total; 
-                     if (!folioTarjeta) { 
-                         alert('Por favor, ingrese el folio o número de autorización.');
-                         if(modalFolioPago) modalFolioPago.focus();
-                         return;
-                     }
-                 }
-                 
-                 const payload = {
-                     _token: csrfToken, cliente_id: selectedClientId, metodo_pago: metodoPago,
-                     total: total, monto_recibido: montoRecibido, monto_entregado: montoEntregado,
-                     detalles: detalles
-                 };
-
-                 this.disabled = true;
-                 this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Procesando...';
-                 
-                 try {
-                     const response = await fetch("{{ route('ventas.store') }}", { 
-                         method: 'POST',
-                         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken },
-                         body: JSON.stringify(payload)
-                     });
-                     const result = await response.json(); // Esperar la respuesta JSON
-
-                     if (response.ok) {
-                         // ***** INICIO DE MODIFICACIÓN: Lógica del Ticket *****
-                         
-                         // 1. Mostrar alerta (Opcional)
-                         //let msg = `Venta ${result.venta_id || ''} procesada!`;
-                         //if (metodoPago === 'efectivo') {
-                            // msg += `\nCambio: $${montoEntregado.toFixed(2)}`;
-                         //}
-                         //alert(msg);
-                         
-                         // 1. Abrir el ticket PDF en una nueva pestaña
-                         // (Asegúrate de que la ruta 'ventas.ticket' exista en web.php)
-                         const ticketUrl = `{{ url('/ventas/ticket') }}/${result.venta_id}`;
-                         window.open(ticketUrl, '_blank');
-                         
-                         // 2. Limpiar y recargar
-                         if(paymentModal) paymentModal.hide(); 
-                         for (const id in cart) { delete cart[id]; }
-                         updateSelectedClient(null, 'Público General'); 
-                         updateCartUI();
-                         window.location.reload(); 
-
-                         // ***** FIN DE MODIFICACIÓN *****
-                         
-                     } else { 
-                          let errMsg = result.message || 'Error.';
-                          if (result.errors) { errMsg += '\nDetalles:\n'; for(const f in result.errors) {errMsg += `- ${result.errors[f].join(', ')}\n`;} }
-                          alert('Error: \n' + errMsg);
-                     }
-                 } catch (e) { 
-                     console.error('Error al procesar venta:', e); 
-                     alert('Error de conexión o problema en el script.');
-                  } 
-                 finally {
-                      this.disabled = false;
-                      this.innerHTML = '<i class="fas fa-check-circle me-2"></i> Confirmar Pago';
-                 }
-             }); 
+            if (metodo === 'efectivo') {
+                const recibido = modalMontoRecibido ? (parseFloat(modalMontoRecibido.value) || 0) : 0;
+                const cambio = recibido - total;
+                modalCambioDisplay.textContent = `$${Math.max(0, cambio).toFixed(2)}`;
+                confirmPaymentBtn.disabled = (recibido < total);
+            } else if (metodo === 'tarjeta') {
+                modalCambioDisplay.textContent = '$0.00';
+                const folio = modalFolioPago ? modalFolioPago.value.trim() : '';
+                confirmPaymentBtn.disabled = (folio === '');
+            }
         }
-        // ***** FIN MODIFICACIÓN *****
+        
+        if (confirmPaymentBtn) {
+            confirmPaymentBtn.addEventListener('click', async function() {
+                if (Object.keys(cart).length === 0 || !totalSpan) return;
 
-        // Inicializar (sin cambios)
+                const detalles = Object.keys(cart).map(id => ({
+                    producto_id: id, cantidad: cart[id].qty, precio_unitario: cart[id].price, importe: cart[id].price * cart[id].qty
+                }));
+                const total = parseFloat(totalSpan.textContent.replace('$', ''));
+                const metodoPago = modalMetodoPago ? modalMetodoPago.value : 'efectivo';
+                let montoRecibido = modalMontoRecibido ? (parseFloat(modalMontoRecibido.value) || 0) : total;
+                let montoEntregado = 0;
+                const folioTarjeta = modalFolioPago ? modalFolioPago.value.trim() : null;
+
+                if (metodoPago === 'efectivo') {
+                    montoEntregado = Math.max(0, montoRecibido - total);
+                    if (montoRecibido < total) {
+                        alert('Monto recibido insuficiente.');
+                        if(modalMontoRecibido) modalMontoRecibido.focus();
+                        return;
+                    }
+                } else if (metodoPago === 'tarjeta') {
+                    montoRecibido = total;
+                    if (!folioTarjeta) {
+                        alert('Por favor, ingrese el folio o número de autorización.');
+                        if(modalFolioPago) modalFolioPago.focus();
+                        return;
+                    }
+                }
+                
+                const payload = {
+                    _token: csrfToken, cliente_id: selectedClientId, metodo_pago: metodoPago,
+                    total: total, monto_recibido: montoRecibido, monto_entregado: montoEntregado,
+                    detalles: detalles
+                };
+
+                this.disabled = true;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Procesando...';
+                
+                try {
+                    const response = await fetch("{{ route('ventas.store') }}", {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+                        body: JSON.stringify(payload)
+                    });
+                    const result = await response.json();
+
+                    if (response.ok) {
+                        if(paymentModal) paymentModal.hide(); // Cerrar el modal de pago
+
+                        // ***** CAMBIO CLAVE AQUÍ *****
+                        // 1. Abrir el ticket PDF en una nueva pestaña
+                        // (Asegúrate de que la ruta 'ventas.ticket' exista en web.php y apunte a generarTicketPDF)
+                        const printUrl = `{{ url('/ventas/imprimir') }}/${result.venta_id}`;
+                        
+                        // Abre la pestaña y la referencia de la ventana se guarda en 'newWindow'
+                        const newWindow = window.open(printUrl, '_blank');
+                        // 2. Limpiar y recargar el TPV INMEDIATAMENTE
+                        // Esto hace que el TPV esté listo para la siguiente venta al instante
+                        for (const id in cart) { delete cart[id]; }
+                          updateSelectedClient(null, 'Público General');
+                          updateCartUI();
+                          window.location.reload(); 
+                        
+                        // NOTA: No necesitamos JS para imprimir aquí.
+                        // El navegador detectará que es un PDF y abrirá el diálogo.
+                        // Y no podemos cerrar la ventana del PDF con JS desde aquí por seguridad.
+                        // El usuario tendrá que cerrar la pestaña del PDF manualmente después de imprimir.
+
+                    } else {
+                        let errMsg = result.message || 'Error.';
+                        if (result.errors) { errMsg += '\nDetalles:\n'; for(const f in result.errors) {errMsg += `- ${result.errors[f].join(', ')}\n`;} }
+                        console.error('Error al procesar la venta:', errMsg);
+                        alert('Error: \n' + errMsg);
+                    }
+                } catch (e) {
+                    console.error('Error en fetch:', e);
+                    alert('Error de conexión o problema en el script.');
+                }
+                finally {
+                    this.disabled = false;
+                    this.innerHTML = '<i class="fas fa-check-circle me-2"></i> Confirmar Pago';
+                }
+            });
+        }
+
+        // Inicializar
         updateCartUI();
         populateClientDropdown();
         updateSelectedClient(null, 'Público General');
@@ -548,8 +533,16 @@
 </script>
 
 <style>
-/* Estilos (sin cambios) */
-.product-card:hover { /* ... */ }
-.fs-sm { /* ... */ } 
+/* Estilos */
+.product-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+    transition: all 0.2s ease-in-out;
+}
+.fs-sm {
+    font-size: 0.85rem;
+}
 </style>
+
 @endsection
+
