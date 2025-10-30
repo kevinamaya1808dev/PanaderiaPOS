@@ -17,28 +17,46 @@
                         <button class="btn btn-sm btn-outline-secondary me-2 category-filter" data-category-id="{{ $cat->id }}">{{ $cat->nombre }}</button>
                     @endforeach
                 </div>
-                <div class="row g-3 flex-grow-1 overflow-auto p-2 border rounded shadow-sm bg-white" id="product-list">
-                    @forelse ($productos as $producto)
-                        <div class="col-4 col-sm-3 col-md-2 product-item" data-category-id="{{ $producto->categoria_id }}">
-                            <div class="card h-100 product-card shadow-sm border-0"
-                                style="cursor: pointer;"
-                                data-id="{{ $producto->id }}"
-                                data-name="{{ $producto->nombre }}"
-                                data-price="{{ $producto->precio }}"
-                                data-stock="{{ $producto->inventario->stock ?? 0 }}">
-                                <div class="card-body p-2 text-center d-flex flex-column justify-content-between">
-                                    <h6 class="card-title mb-1 fw-bold fs-sm product-name">{{ $producto->nombre }}</h6>
-                                    <div>
-                                        <p class="card-text text-success fs-5 mb-0">${{ number_format($producto->precio, 2) }}</p>
-                                        <small class="text-muted product-stock">Stock: {{ $producto->inventario->stock ?? 0 }}</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    @empty
-                        <div class="alert alert-warning w-100 text-center">No hay productos con stock disponible para la venta.</div>
-                    @endforelse
+                <!-- ... (Tu código HTML del TPV hasta la lista de productos) ... -->
+
+<div class="row g-3 overflow-auto p-2 border rounded shadow-sm bg-white" id="product-list" style="max-height: calc(100vh - 300px);">
+    @forelse ($productos as $producto)
+        <div class="col-4 col-sm-3 col-md-2 product-item" data-category-id="{{ $producto->categoria_id }}">
+            
+            {{-- La tarjeta del producto ahora necesita el data-image --}}
+            <div class="card h-100 product-card shadow-sm border-0" 
+                 style="cursor: pointer;"
+                 data-id="{{ $producto->id }}" 
+                 data-name="{{ $producto->nombre }}" 
+                 data-price="{{ $producto->precio }}"
+                 data-stock="{{ $producto->inventario->stock ?? 0 }}"
+                 
+                 {{-- ¡NUEVO! Añadimos la ruta de la imagen --}}
+                 data-image="{{ $producto->imagen ? asset('storage/' . $producto->imagen) : 'https://placehold.co/100x100/EBF5FB/333333?text=Sin+Imagen' }}">
+                
+                {{-- ¡NUEVO! Contenedor para la imagen --}}
+                <div style="height: 100px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #f8f9fa;">
+                    <img src="{{ $producto->imagen ? asset('storage/' . $producto->imagen) : 'https://placehold.co/100x100/EBF5FB/333333?text=Sin+Imagen' }}" 
+                         class="card-img-top" 
+                         alt="{{ $producto->nombre }}"
+                         style="max-height: 100%; width: auto; object-fit: cover;">
                 </div>
+
+                <div class="card-body p-2 text-center d-flex flex-column justify-content-between">
+                    <h6 class="card-title mb-1 fw-bold fs-sm product-name">{{ $producto->nombre }}</h6> 
+                    <div>
+                        <p class="card-text text-success fs-5 mb-0">${{ number_format($producto->precio, 2) }}</p>
+                        <small class="text-muted product-stock">Stock: {{ $producto->inventario->stock ?? 0 }}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @empty
+        <div class="alert alert-warning w-100 text-center">No hay productos con stock disponible para la venta.</div>
+    @endforelse
+</div>
+
+<!-- ... (El resto de tu HTML y el <script>) ... -->
             </div>
 
             <!-- 2. Columna del Carrito y Pago --><div class="col-lg-4 d-flex flex-column border-start ps-4 h-100">

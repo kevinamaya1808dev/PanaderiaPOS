@@ -8,6 +8,8 @@ use App\Models\Inventario;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+// ¡IMPORTANTE! Añadir Storage para manejar archivos
+use Illuminate\Support\Facades\Storage;
 
 class ProductoController extends Controller
 {
@@ -35,11 +37,13 @@ class ProductoController extends Controller
      */
     public function store(Request $request)
     {
+        // ***** CAMBIO 1: Añadir validación para la imagen *****
         $request->validate([
             'categoria_id' => 'required|exists:categorias,id',
             'nombre' => 'required|string|max:255',
             'descripcion' => 'nullable|string',
             'precio' => 'required|numeric|min:0.01',
+            'imagen' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048', // 2MB max
             // Campos de Inventario
             'stock_inicial' => 'required|integer|min:0',
             'cantidad_minima' => 'required|integer|min:0',
@@ -48,20 +52,23 @@ class ProductoController extends Controller
         DB::beginTransaction();
 
         try {
+            // ***** CAMBIO 2: Preparar datos y manejar imagen *****
+            $datosProducto = $request->only(['categoria_id', 'nombre', 'descripcion', 'precio']);
+
+            if ($request->hasFile('imagen')) {
+                // Guarda la imagen en 'storage/app/public/productos'
+                $path = $request->file('imagen')->store('productos', 'public');
+                $datosProducto['imagen'] = $path; // Añadir la ruta de la imagen
+            }
+
             // 1. Crear el Producto
-            $producto = Producto::create([
-                'categoria_id' => $request->categoria_id,
-                'nombre' => $request->nombre,
-                'descripcion' => $request->descripcion,
-                'precio' => $request->precio,
-            ]);
+            $producto = Producto::create($datosProducto);
 
             // 2. Crear el registro de Inventario inicial (vinculado al producto_id)
             Inventario::create([
                 'producto_id' => $producto->id,
                 'stock' => $request->stock_inicial,
                 'cantidad_minima' => $request->cantidad_minima,
-                // Puedes dejar cantidad_maxima como stock_inicial por defecto o usar null
                 'cantidad_maxima' => 99999, 
             ]);
 
@@ -91,11 +98,13 @@ class ProductoController extends Controller
      */
     public function update(Request $request, Producto $producto)
     {
+        // ***** CAMBIO 3: Añadir validación para la nueva imagen *****
         $request->validate([
             'categoria_id' => 'required|exists:categorias,id',
             'nombre' => ['required', 'string', 'max:255', Rule::unique('productos')->ignore($producto->id)],
             'descripcion' => 'nullable|string',
             'precio' => 'required|numeric|min:0.01',
+            'imagen' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048', // 2MB max
             'cantidad_minima' => 'required|integer|min:0',
             'stock' => 'required|integer|min:0', // El stock también puede ser editado
         ]);
@@ -103,13 +112,22 @@ class ProductoController extends Controller
         DB::beginTransaction();
 
         try {
+            // ***** CAMBIO 4: Preparar datos y manejar actualización de imagen *****
+            $datosProducto = $request->only(['categoria_id', 'nombre', 'descripcion', 'precio']);
+
+            if ($request->hasFile('imagen')) {
+                // 1. Borrar la imagen antigua si existe
+                if ($producto->imagen) {
+                    Storage::disk('public')->delete($producto->imagen);
+                }
+                
+                // 2. Guardar la nueva imagen
+                $path = $request->file('imagen')->store('productos', 'public');
+                $datosProducto['imagen'] = $path; // Añadir la nueva ruta
+            }
+
             // 1. Actualizar Producto
-            $producto->update([
-                'categoria_id' => $request->categoria_id,
-                'nombre' => $request->nombre,
-                'descripcion' => $request->descripcion,
-                'precio' => $request->precio,
-            ]);
+            $producto->update($datosProducto);
 
             // 2. Actualizar Inventario (Usando la relación hasOne)
             $producto->inventario->update([
@@ -134,6 +152,11 @@ class ProductoController extends Controller
     {
         DB::beginTransaction();
         try {
+            // ***** CAMBIO 5: Eliminar la imagen del almacenamiento *****
+            if ($producto->imagen) {
+                Storage::disk('public')->delete($producto->imagen);
+            }
+
             // El inventario se eliminará automáticamente si la FK tiene ON DELETE CASCADE, 
             // pero es más seguro eliminarlo explícitamente primero.
             if ($producto->inventario) {
@@ -150,3 +173,4 @@ class ProductoController extends Controller
         }
     }
 }
+
