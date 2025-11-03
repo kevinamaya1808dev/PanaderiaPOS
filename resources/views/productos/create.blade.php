@@ -3,104 +3,161 @@
 @section('content')
 <div class="container">
     <div class="row justify-content-center">
-        <div class="col-md-8">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <i class="fas fa-plus-circle me-2"></i> Crear Nuevo Producto
+        <div class="col-md-10">
+            <div class="card shadow-sm border-0">
+                
+                <div class="card-header bg-dark text-white border-0">
+                    <h4 class="mb-0"><i class="fas fa-plus-circle me-2"></i> Crear Nuevo Producto</h4>
                 </div>
-                <div class="card-body">
+
+                <div class="card-body p-4">
                     
-                    {{-- Formulario con enctype para subir archivos --}}
                     <form action="{{ route('productos.store') }}" method="POST" enctype="multipart/form-data">
                         @csrf
 
-                        <h5 class="text-muted mb-3">Detalles del Producto</h5>
-
-                        {{-- Campo Nombre --}}
-                        <div class="mb-3">
-                            <label for="nombre" class="form-label">Nombre del Producto</label>
-                            <input type="text" class="form-control @error('nombre') is-invalid @enderror" id="nombre" name="nombre" value="{{ old('nombre') }}" required>
-                            @error('nombre')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        {{-- Campo Descripción --}}
-                        <div class="mb-3">
-                            <label for="descripcion" class="form-label">Descripción (Opcional)</label>
-                            <textarea class="form-control" id="descripcion" name="descripcion">{{ old('descripcion') }}</textarea>
-                        </div>
-
                         <div class="row">
-                            {{-- Campo Precio --}}
-                            <div class="col-md-6 mb-3">
-                                <label for="precio" class="form-label">Precio de Venta</label>
-                                <div class="input-group">
-                                    <span class="input-group-text">$</span>
-                                    <input type="number" class="form-control @error('precio') is-invalid @enderror" id="precio" name="precio" value="{{ old('precio') }}" step="0.01" min="0" required>
+
+                            {{-- ============================================= --}}
+                            {{-- COLUMNA IZQUIERDA (Información y Stock)     --}}
+                            {{-- ============================================= --}}
+                            <div class="col-md-7 border-end pe-4">
+
+                                <h6 class="text-muted">Detalles del Producto</h6>
+                                <hr class="mt-1 mb-3 border-secondary">
+
+                                {{-- Campo Nombre --}}
+                                <div class="mb-3">
+                                    <label for="nombre" class="form-label">Nombre del Producto</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-box fa-fw"></i></span>
+                                        <input type="text" class="form-control @error('nombre') is-invalid @enderror" id="nombre" name="nombre" value="{{ old('nombre') }}" required>
+                                    </div>
+                                    @error('nombre')
+                                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                                    @enderror
                                 </div>
-                                @error('precio')
-                                    <div class="invalid-feedback d-block">{{ $message }}</div>
-                                @enderror
-                            </div>
 
-                            {{-- Campo Categoría --}}
-                            <div class="col-md-6 mb-3">
-                                <label for="categoria_id" class="form-label">Categoría</label>
-                                <select class="form-select @error('categoria_id') is-invalid @enderror" id="categoria_id" name="categoria_id" required>
-                                    <option value="" disabled selected>Seleccione una categoría</option>
-                                    
-                                    {{-- ¡CORRECCIÓN AQUÍ! Bucle descomentado --}}
-                                    @foreach($categorias as $categoria)
-                                        <option value="{{ $categoria->id }}" {{ old('categoria_id') == $categoria->id ? 'selected' : '' }}>
-                                            {{ $categoria->nombre }}
-                                        </option>
-                                    @endforeach
-                                    
-                                </select>
-                                @error('categoria_id')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
+                                {{-- Campo Descripción --}}
+                                <div class="mb-3">
+                                    <label for="descripcion" class="form-label">Descripción (Opcional)</label>
+                                    <textarea class="form-control" id="descripcion" name="descripcion" rows="3">{{ old('descripcion') }}</textarea>
+                                </div>
 
-                        {{-- Campo Imagen --}}
-                        <div class="mb-3">
-                            <label for="imagen" class="form-label">Imagen del Producto (Opcional)</label>
-                            <input type="file" class="form-control @error('imagen') is-invalid @enderror" id="imagen" name="imagen" accept="image/png,image/jpeg,image/webp">
-                            @error('imagen')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
+                                {{-- Campo Precio --}}
+                                <div class="mb-3">
+                                    <label for="precio" class="form-label">Precio de Venta</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-dollar-sign fa-fw"></i></span>
+                                        <input type="number" class="form-control @error('precio') is-invalid @enderror" id="precio" name="precio" value="{{ old('precio') }}" step="0.01" min="0" required>
+                                    </div>
+                                    @error('precio')
+                                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                                    @enderror
+                                </div>
+
+                                <h6 class="text-muted mt-4">Inventario y Stock Inicial</h6>
+                                <hr class="mt-1 mb-3 border-secondary">
+
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="stock_inicial" class="form-label">Stock Inicial</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text"><i class="fas fa-boxes fa-fw"></i></span>
+                                            <input type="number" class="form-control @error('stock_inicial') is-invalid @enderror" id="stock_inicial" name="stock_inicial" value="{{ old('stock_inicial', 0) }}" min="0" required>
+                                        </div>
+                                        @error('stock_inicial')
+                                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label for="cantidad_minima" class="form-label">Stock Mínimo (Alerta)</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text"><i class="fas fa-exclamation-triangle fa-fw"></i></span>
+                                            <input type="number" class="form-control @error('cantidad_minima') is-invalid @enderror" id="cantidad_minima" name="cantidad_minima" value="{{ old('cantidad_minima', 5) }}" min="0" required>
+                                        </div>
+                                        @error('cantidad_minima')
+                                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+                                </div>
+
+                            </div> {{-- Fin Columna Izquierda --}}
+
+
+                            {{-- ============================================= --}}
+                            {{-- COLUMNA DERECHA (Categoría e Imagen)        --}}
+                            {{-- ============================================= --}}
+                            <div class="col-md-5 ps-4">
+                                
+                                <h6 class="text-muted">Clasificación e Imagen</h6>
+                                <hr class="mt-1 mb-3 border-secondary">
+
+                                {{-- Campo Categoría --}}
+                                <div class="mb-3">
+                                    <label for="categoria_id" class="form-label">Categoría</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-tags fa-fw"></i></span>
+                                        <select class="form-select @error('categoria_id') is-invalid @enderror" id="categoria_id" name="categoria_id" required>
+                                            <option value="" disabled selected>Seleccione una categoría</option>
+                                            @foreach($categorias as $categoria)
+                                                <option value="{{ $categoria->id }}" {{ old('categoria_id') == $categoria->id ? 'selected' : '' }}>
+                                                    {{ $categoria->nombre }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    @error('categoria_id')
+                                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                                    @enderror
+                                </div>
+
+                                {{-- Campo Imagen con Vista Previa y Botón de Quitar --}}
+                                <div class="mb-3">
+                                    <label for="imagen" class="form-label">Imagen del Producto (Opcional)</label>
+                                    <div class="input-group mb-2">
+                                        <input type="file" class="form-control @error('imagen') is-invalid @enderror" id="imagen" name="imagen" accept="image/png,image/jpeg,image/webp">
+                                    </div>
+                                    
+                                    {{-- Contenedor de la vista previa --}}
+                                    <div id="image-preview-container" class="border rounded p-2 text-center bg-light position-relative">
+                                        <img id="image-preview" src="#" alt="Vista previa" 
+                                             class="img-fluid rounded" 
+                                             style="display: none; max-width: 100%; max-height: 200px; object-fit: contain; margin: 0 auto;"/>
+                                        
+                                        <div id="image-placeholder" class="text-muted d-flex align-items-center justify-content-center" style="height: 200px;">
+                                            <i class="fas fa-image fa-3x"></i>
+                                        </div>
+
+                                        {{-- ====================================================== --}}
+                                        {{-- CAMBIO: Botón reemplazado por una "X" grande y roja   --}}
+                                        {{-- ====================================================== --}}
+                                        <button type="button" id="clear-image-btn" 
+                                                class="position-absolute" 
+                                                style="display: none; top: 0.5rem; right: 0.75rem; z-index: 10; background: none; border: none; font-size: 2rem; color: #dc3545; line-height: 1; cursor: pointer; padding: 0;" 
+                                                title="Quitar imagen seleccionada">
+                                            &times;
+                                        </button>
+                                    </div>
+                                    
+                                    @error('imagen')
+                                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                                    @enderror
+                                </div>
+
+                            </div> {{-- Fin Columna Derecha --}}
+
+                        </div> {{-- Fin Row Principal --}}
+
 
                         <hr>
 
-                        <h5 class="text-muted mb-3">Inventario y Stock Inicial</h5>
-
-                        {{-- ¡CAMPOS AÑADIDOS DE VUELTA! --}}
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="stock_inicial" class="form-label">Stock Inicial</label>
-                                <input type="number" class="form-control @error('stock_inicial') is-invalid @enderror" id="stock_inicial" name="stock_inicial" value="{{ old('stock_inicial', 0) }}" min="0" required>
-                                @error('stock_inicial')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="cantidad_minima" class="form-label">Stock Mínimo (Alerta)</label>
-                                <input type="number" class="form-control @error('cantidad_minima') is-invalid @enderror" id="cantidad_minima" name="cantidad_minima" value="{{ old('cantidad_minima', 5) }}" min="0" required>
-                                @error('cantidad_minima')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                        </div>
-
-                        <hr>
-
-                        <div class="d-flex justify-content-end">
-                            <a href="{{ route('productos.index') }}" class="btn btn-secondary me-2">Cancelar</a>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save me-2"></i> Guardar Producto
+                        {{-- Botones de acción --}}
+                        <div class="d-flex justify-content-between mt-4">
+                            <a href="{{ route('productos.index') }}" class="btn btn-secondary">
+                                <i class="fas fa-times me-1"></i> Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save me-1"></i> Guardar Producto
                             </button>
                         </div>
                     </form>
@@ -111,3 +168,48 @@
 </div>
 @endsection
 
+
+{{-- El Script de JavaScript no necesita cambios, funciona igual --}}
+@push('scripts')
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const imageInput = document.getElementById('imagen');
+        const imagePreview = document.getElementById('image-preview');
+        const imagePlaceholder = document.getElementById('image-placeholder');
+        const clearImageBtn = document.getElementById('clear-image-btn');
+        const imagePreviewContainer = document.getElementById('image-preview-container');
+
+        // Función para actualizar la vista previa
+        function updateImagePreview(file) {
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    imagePreview.src = e.target.result;
+                    imagePreview.style.display = 'block';
+                    imagePlaceholder.style.display = 'none';
+                    clearImageBtn.style.display = 'block'; 
+                    imagePreviewContainer.style.height = 'auto'; 
+                }
+                reader.readAsDataURL(file);
+            } else {
+                imagePreview.src = '#';
+                imagePreview.style.display = 'none';
+                imagePlaceholder.style.display = 'flex'; 
+                clearImageBtn.style.display = 'none'; 
+                imagePreviewContainer.style.height = ''; 
+            }
+        }
+
+        // Event listener para el input de archivo
+        imageInput.addEventListener('change', function(event) {
+            updateImagePreview(event.target.files[0]);
+        });
+
+        // Event listener para el botón de limpiar
+        clearImageBtn.addEventListener('click', function() {
+            imageInput.value = ''; 
+            updateImagePreview(null); 
+        });
+    });
+</script>
+@endpush
