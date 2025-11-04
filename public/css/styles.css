@@ -1,8 +1,8 @@
 /* Paleta de Colores Panadería */
 :root {
-    --color-fondo: #F3F4F6;          /* Marrón Trigo (Beige) */
-    --color-sidebar: #f6efe7;       /* Marrón Pan Tostado */
-    --color-header: #c58d4c;         /* Naranja Amasado */
+    --color-fondo: #F3F4F6;        /* Marrón Trigo (Beige) */
+    --color-sidebar: #f6efe7;      /* Marrón Pan Tostado */
+    --color-header: #c58d4c;        /* Naranja Amasado */
     --color-texto-principal: #4E342E;/* Marrón Oscuro (Café) */
     --color-texto-claro: #f5f5f5;
     --color-acento-activo: #FFFFFF;  /* Blanco para el link activo */
@@ -28,11 +28,8 @@ body {
 .sidebar {
     width: 250px;
     
-    /* 👇 REEMPLAZA ESTA LÍNEA 👇 */
-    /* height: 100vh; */ /* <--- Esta es la línea incorrecta */
-
-    /* 👇 POR ESTA LÍNEA 👇 */
-    height: calc(100vh - 56px); /* <--- Esta es la línea correcta */
+    /* Esta es tu corrección de altura, está perfecta */
+    height: calc(100vh - 56px); 
 
     position: fixed;
     top: 56px;
@@ -70,26 +67,49 @@ body {
 
 /* Estilos para TODOS los enlaces del sidebar */
 .sidebar .nav-link {
-    /* ¡CAMBIO AQUÍ! Se añade !important para forzar el color negro */
     color: #000000 !important;
     opacity: 0.9;
+
+    /* ---- AÑADIDO: Tamaños más grandes ---- */
+    font-size: 1.05rem;  /* Letra más grande */
+    padding-top: 0.7rem;
+    padding-bottom: 0.7rem;
+    /* ------------------------------------- */
 }
+
+/* ---- AÑADIDO: Regla específica para los íconos ---- */
+.sidebar .nav-link .fas,
+.sidebar .nav-link .far {
+    font-size: 1.1rem; /* Ícono más grande */
+    width: 25px;     /* Ancho fijo para alinear el texto */
+    text-align: center;
+}
+/* ------------------------------------------------- */
+
+
 .sidebar-heading {
-    color: #000000 !important; /* Color de texto blanco */
-    opacity: 0.9; /* Un poco de transparencia para que se vea suave */
+    color: #000000 !important; 
+    opacity: 0.9; 
+
+    /* ---- AÑADIDO: Tamaños más grandes ---- */
+    font-size: 1rem;  /* CAMBIO: Aumentado a 1rem (más grande que 0.9) */
+    font-weight: 700;   /* Más grueso */
+    letter-spacing: .05em;
+    padding-top: 1.25rem;
+    text-transform: uppercase; /* CAMBIO: Asegura que siempre esté en mayúsculas */
+    /* ------------------------------------- */
 }
+
 /* Efecto al pasar el mouse sobre un enlace */
 .sidebar .nav-link:hover {
-    background-color:  #c58d4c; /* Un ligero brillo blanco */
+    background-color:  #c58d4c; 
     opacity: 1;
 }
 
 /* Estilo para el enlace ACTIVO/SELECCIONADO en el sidebar */
 .nav-link.active {
     font-weight: 700;
-    /* Cambiado a un color más oscuro, puedes usar un color específico o una variable */
-    background-color: #c58d4c; /* Marrón oscuro (café) */
-    /* Cambiado a blanco para que contraste */
+    background-color: #c58d4c; 
     color: #FFFFFF !important; 
 }
 
@@ -110,3 +130,5 @@ body {
 .top-header .btn-dark:hover {
     background-color: rgba(0, 0, 0, 0.1);
 }
+
+

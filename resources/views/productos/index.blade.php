@@ -3,103 +3,81 @@
 @section('content')
 <div class="container">
     
-    {{-- Card principal para la gestión de productos --}}
-    <div class="card shadow-sm border-0">
+    {{-- CAMBIO: Barra de Título y Botón Crear (sin card) --}}
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">Gestión de Productos</h2>
         
-        {{-- Card Header: Título y Botón de Crear --}}
-        <div class="card-header bg-white border-0 border-bottom d-flex justify-content-between align-items-center">
-            <h4 class="mb-0">Gestión de Productos</h4>
-            
-            {{-- Botón para CREAR PRODUCTO --}}
-            @if (Auth::user()->hasPermissionTo('productos', 'alta'))
-                <a href="{{ route('productos.create') }}" class="btn btn-primary">
-                    <i class="fas fa-plus-circle me-1"></i> Crear Nuevo Producto
-                </a>
-            @endif
-        </div>
+        {{-- Botón para CREAR PRODUCTO --}}
+        @if (Auth::user()->hasPermissionTo('productos', 'alta'))
+            <a href="{{ route('productos.create') }}" class="btn btn-primary">
+                <i class="fas fa-plus-circle me-1"></i> Crear Nuevo Producto
+            </a>
+        @endif
+    </div>
 
-        {{-- Card Body: Contiene la tabla --}}
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                
-                {{-- Aplicamos el estilo Cebra y cabecera oscura --}}
-                <table class="table table-striped table-hover align-middle mb-0">
-                    <thead class="table-dark">
-                        <tr>
-                            <th style="width: 50px;">ID</th>
-                            
-                            {{-- ========================================== --}}
-                            {{-- 1. SE AÑADE LA COLUMNA IMAGEN --}}
-                            {{-- ========================================== --}}
+    {{-- CAMBIO: Tabla libre en el contenedor --}}
+    <div class="table-responsive">
+        
+        {{-- Se mantiene el estilo cebra y cabecera oscura --}}
+        <table class="table table-striped table-hover align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th style="width: 50px;">ID</th>
+                    <th>Nombre</th>
+                    <th style="width: 100px;">Imagen</th>
+                    <th>Categoría</th>
+                    <th>Precio</th>
+                    <th>Stock</th>
+                    <th style="width: 200px;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse ($productos as $producto)
+                <tr>
+                    <td>{{ $producto->id }}</td>
+                    <td>{{ $producto->nombre }}</td>
+                    <td>
+                        <img src="{{ $producto->imagen ? asset('storage/' . $producto->imagen) : 'https://placehold.co/100x100/EBF5FB/333333?text=N/A' }}" 
+                             alt="{{ $producto->nombre }}" 
+                             class="img-fluid rounded"
+                             style="width: 60px; height: 60px; object-fit: cover;">
+                    </td>
+                    <td>{{ $producto->categoria->nombre ?? 'N/A' }}</td>
+                    <td>${{ number_format($producto->precio, 2) }}</td>
+                    <td>
+                        {{ $producto->inventario->stock ?? '0' }}
+                    </td>
+                    <td>
+                        {{-- Editar --}}
+                        @if (Auth::user()->hasPermissionTo('productos', 'editar'))
+                            <a href="{{ route('productos.edit', $producto->id) }}" class="btn btn-sm btn-warning me-1" title="Editar">
+                                <i class="fas fa-edit me-1"></i> Editar
+                            </a>
+                        @endif
 
-                            
-                            <th>Nombre</th>
-                            <th style="width: 100px;">Imagen</th>
-                            <th>Categoría</th>
-                            <th>Precio</th>
-                            <th>Stock</th>
-                            <th style="width: 200px;">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @forelse ($productos as $producto)
-                        <tr>
-                            <td>{{ $producto->id }}</td>
-
-                            {{-- ========================================== --}}
-                            {{-- 2. SE AÑADE LA CELDA DE LA IMAGEN --}}
-                            {{-- ========================================== --}}
-
-                            <td>{{ $producto->nombre }}</td>
-                            <td>
-                                <img src="{{ $producto->imagen ? asset('storage/' . $producto->imagen) : 'https://placehold.co/100x100/EBF5FB/333333?text=N/A' }}" 
-                                     alt="{{ $producto->nombre }}" 
-                                     class="img-fluid rounded"
-                                     style="width: 60px; height: 60px; object-fit: cover;">
-                            </td>
-
-                            <td>{{ $producto->categoria->nombre ?? 'N/A' }}</td>
-                            <td>${{ number_format($producto->precio, 2) }}</td>
-                            <td>
-                                {{ $producto->inventario->stock ?? '0' }}
-                            </td>
-                            <td>
-                                {{-- Editar --}}
-                                @if (Auth::user()->hasPermissionTo('productos', 'editar'))
-                                    <a href="{{ route('productos.edit', $producto->id) }}" class="btn btn-sm btn-warning me-1" title="Editar">
-                                        <i class="fas fa-edit me-1"></i> Editar
-                                    </a>
-                                @endif
-
-                                {{-- Eliminar (con modal) --}}
-                                @if (Auth::user()->hasPermissionTo('productos', 'eliminar'))
-                                    <button type="button" class="btn btn-sm btn-danger" 
-                                            title="Eliminar"
-                                            data-bs-toggle="modal" 
-                                            data-bs-target="#confirmDeleteModal"
-                                            data-item-nombre="{{ $producto->nombre }}"
-                                            data-form-action="{{ route('productos.destroy', $producto->id) }}">
-                                        <i class="fas fa-trash me-1"></i> Eliminar
-                                    </button>
-                                @endif
-                            </td>
-                        </tr>
-                        @empty
-                        <tr>
-                            {{-- ========================================== --}}
-                            {{-- 3. SE AJUSTA EL COLSPAN A "7" --}}
-                            {{-- ========================================== --}}
-                            <td colspan="7" class="text-center text-muted p-4">
-                                No hay productos registrados.
-                            </td>
-                        </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-        </div> {{-- Fin card-body --}}
-
-    </div> {{-- Fin card --}}
+                        {{-- Eliminar (con modal) --}}
+                        @if (Auth::user()->hasPermissionTo('productos', 'eliminar'))
+                            <button type="button" class="btn btn-sm btn-danger" 
+                                    title="Eliminar"
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#confirmDeleteModal"
+                                    data-item-nombre="{{ $producto->nombre }}"
+                                    data-form-action="{{ route('productos.destroy', $producto->id) }}">
+                                <i class="fas fa-trash me-1"></i> Eliminar
+                            </button>
+                        @endif
+                    </td>
+                </tr>
+                @empty
+                <tr>
+                    <td colspan="7" class="text-center text-muted p-4">
+                        No hay productos registrados.
+                    </td>
+                </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
 </div>
 
 
@@ -145,18 +123,20 @@
     document.addEventListener('DOMContentLoaded', function () {
         var confirmDeleteModal = document.getElementById('confirmDeleteModal');
         
-        confirmDeleteModal.addEventListener('show.bs.modal', function (event) {
-            var button = event.relatedTarget;
-            
-            var itemNombre = button.getAttribute('data-item-nombre'); 
-            var formAction = button.getAttribute('data-form-action');
-            
-            var modalBodyNombre = confirmDeleteModal.querySelector('#modalItemNombre');
-            var deleteForm = confirmDeleteModal.querySelector('#deleteForm');
-            
-            modalBodyNombre.textContent = itemNombre;
-            deleteForm.setAttribute('action', formAction);
-        });
+        if (confirmDeleteModal) {
+            confirmDeleteModal.addEventListener('show.bs.modal', function (event) {
+                var button = event.relatedTarget;
+                
+                var itemNombre = button.getAttribute('data-item-nombre'); 
+                var formAction = button.getAttribute('data-form-action');
+                
+                var modalBodyNombre = confirmDeleteModal.querySelector('#modalItemNombre');
+                var deleteForm = confirmDeleteModal.querySelector('#deleteForm');
+                
+                modalBodyNombre.textContent = itemNombre;
+                deleteForm.setAttribute('action', formAction);
+            });
+        }
     });
 </script>
 @endpush

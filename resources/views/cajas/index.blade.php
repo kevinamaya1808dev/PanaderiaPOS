@@ -4,14 +4,6 @@
 <div class="container">
     <h2 class="mb-4">Gestión de Flujo de Caja</h2>
 
-    {{-- Mensajes de Sesión --}}
-    @if (session('success'))
-        <div class="alert alert-success">{{ session('success') }}</div>
-    @endif
-    @if (session('error'))
-        <div class="alert alert-danger">{{ session('error') }}</div>
-    @endif
-
     {{-- Errores de validación --}}
     @if ($errors->any())
         <div class="alert alert-danger">

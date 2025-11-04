@@ -3,74 +3,68 @@
 @section('content')
 <div class="container">
     
-    {{-- Card principal para la gestión de categorías --}}
-    <div class="card shadow-sm border-0">
+    {{-- CAMBIO: Barra de Título y Botón Crear (sin card) --}}
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="mb-0">Gestión de Categorías</h2>
         
-        {{-- Card Header: Título y Botón de Crear --}}
-        <div class="card-header bg-white border-0 border-bottom d-flex justify-content-between align-items-center">
-            <h4 class="mb-0">Gestión de Categorías</h4>
-            
-            {{-- Botón para CREAR CATEGORÍA --}}
-            @if (Auth::user()->hasPermissionTo('productos', 'alta'))
-                <a href="{{ route('categorias.create') }}" class="btn btn-primary">
-                    <i class="fas fa-plus-circle me-1"></i> Crear Nueva Categoría
-                </a>
-            @endif
-        </div>
+        {{-- Botón para CREAR CATEGORÍA --}}
+        @if (Auth::user()->hasPermissionTo('productos', 'alta'))
+            <a href="{{ route('categorias.create') }}" class="btn btn-primary">
+                <i class="fas fa-plus-circle me-1"></i> Crear Nueva Categoría
+            </a>
+        @endif
+    </div>
 
-        {{-- Card Body: Contiene la tabla --}}
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                
-                {{-- Aplicamos el estilo Cebra y cabecera oscura --}}
-                <table class="table table-striped table-hover align-middle mb-0">
-                    <thead class="table-dark">
-                        <tr>
-                            <th style="width: 80px;">ID</th>
-                            <th>Nombre</th>
-                            <th style="width: 200px;">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {{-- Usamos @forelse para el estado vacío --}}
-                        @forelse ($categorias as $categoria)
-                        <tr>
-                            <td>{{ $categoria->id }}</td>
-                            <td>{{ $categoria->nombre }}</td>
-                            <td>
-                                {{-- Editar --}}
-                                @if (Auth::user()->hasPermissionTo('productos', 'editar'))
-                                    <a href="{{ route('categorias.edit', $categoria->id) }}" class="btn btn-sm btn-warning me-1" title="Editar">
-                                        <i class="fas fa-edit me-1"></i> Editar
-                                    </a>
-                                @endif
+    {{-- CAMBIO: Tabla libre en el contenedor --}}
+    <div class="table-responsive">
+        
+        {{-- Aplicamos el estilo Cebra y cabecera oscura --}}
+        <table class="table table-striped table-hover align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th style="width: 80px;">ID</th>
+                    <th>Nombre</th>
+                    <th style="width: 200px;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{-- Usamos @forelse para el estado vacío --}}
+                @forelse ($categorias as $categoria)
+                <tr>
+                    <td>{{ $categoria->id }}</td>
+                    <td>{{ $categoria->nombre }}</td>
+                    <td>
+                        {{-- Editar --}}
+                        @if (Auth::user()->hasPermissionTo('productos', 'editar'))
+                            <a href="{{ route('categorias.edit', $categoria->id) }}" class="btn btn-sm btn-warning me-1" title="Editar">
+                                <i class="fas fa-edit me-1"></i> Editar
+                            </a>
+                        @endif
 
-                                {{-- Eliminar (con modal) --}}
-                                @if (Auth::user()->hasPermissionTo('productos', 'eliminar'))
-                                    <button type="button" class="btn btn-sm btn-danger" 
-                                            title="Eliminar"
-                                            data-bs-toggle="modal" 
-                                            data-bs-target="#confirmDeleteModal"
-                                            data-item-nombre="{{ $categoria->nombre }}"
-                                            data-form-action="{{ route('categorias.destroy', $categoria->id) }}">
-                                        <i class="fas fa-trash me-1"></i> Eliminar
-                                    </button>
-                                @endif
-                            </td>
-                        </tr>
-                        @empty
-                        <tr>
-                            <td colspan="3" class="text-center text-muted p-4">
-                                No se encontraron categorías registradas.
-                            </td>
-                        </tr>
-                        @endforelse
-                    </tbody>
-                </table>
-            </div>
-        </div> {{-- Fin card-body --}}
-
-    </div> {{-- Fin card --}}
+                        {{-- Eliminar (con modal) --}}
+                        @if (Auth::user()->hasPermissionTo('productos', 'eliminar'))
+                            <button type="button" class="btn btn-sm btn-danger" 
+                                    title="Eliminar"
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#confirmDeleteModal"
+                                    {{-- CAMBIO: Atributo de dato genérico --}}
+                                    data-item-nombre="{{ $categoria->nombre }}"
+                                    data-form-action="{{ route('categorias.destroy', $categoria->id) }}">
+                                <i class="fas fa-trash me-1"></i> Eliminar
+                            </button>
+                        @endif
+                    </td>
+                </tr>
+                @empty
+                <tr>
+                    <td colspan="3" class="text-center text-muted p-4">
+                        No se encontraron categorías registradas.
+                    </td>
+                </tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
 </div>
 
 
@@ -87,12 +81,13 @@
             <div class="modal-body">
                 ¿Estás seguro de que deseas eliminar: 
                 <br>
+                {{-- CAMBIO: ID genérico --}}
                 <strong id="modalItemNombre" class="fs-5"></strong>?
                 <br><br>
                 <small class="text-muted">Esta acción no se puede deshacer.</small>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                <button type="button" class="btn-secondary" data-bs-dismiss="modal">
                     <i class="fas fa-times me-1"></i> Cancelar
                 </button>
                 
@@ -116,18 +111,21 @@
     document.addEventListener('DOMContentLoaded', function () {
         var confirmDeleteModal = document.getElementById('confirmDeleteModal');
         
-        confirmDeleteModal.addEventListener('show.bs.modal', function (event) {
-            var button = event.relatedTarget;
-            
-            var itemNombre = button.getAttribute('data-item-nombre'); 
-            var formAction = button.getAttribute('data-form-action');
-            
-            var modalBodyNombre = confirmDeleteModal.querySelector('#modalItemNombre');
-            var deleteForm = confirmDeleteModal.querySelector('#deleteForm');
-            
-            modalBodyNombre.textContent = itemNombre;
-            deleteForm.setAttribute('action', formAction);
-        });
+        if (confirmDeleteModal) {
+            confirmDeleteModal.addEventListener('show.bs.modal', function (event) {
+                var button = event.relatedTarget;
+                
+                {{-- CAMBIO: Script genérico --}}
+                var itemNombre = button.getAttribute('data-item-nombre'); 
+                var formAction = button.getAttribute('data-form-action');
+                
+                var modalBodyNombre = confirmDeleteModal.querySelector('#modalItemNombre');
+                var deleteForm = confirmDeleteModal.querySelector('#deleteForm');
+                
+                modalBodyNombre.textContent = itemNombre;
+                deleteForm.setAttribute('action', formAction);
+            });
+        }
     });
 </script>
 @endpush

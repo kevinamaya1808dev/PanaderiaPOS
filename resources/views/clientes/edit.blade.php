@@ -2,28 +2,41 @@
 
 @section('content')
 <div class="container">
-    <div class="card shadow-sm mx-auto" style="max-width: 500px;">
-        <div class="card-header bg-warning text-dark">
-            <h3 class="mb-0">Editar Cliente: {{ $cliente->Nombre }}</h3>
+    {{-- Card centrado --}}
+    <div class="card shadow-sm border-0 mx-auto" style="max-width: 500px;">
+        
+        {{-- CAMBIO: Cabecera oscura y h4 para el título --}}
+        <div class="card-header bg-dark text-white border-0">
+            <h4 class="mb-0">Editar Cliente: {{ $cliente->Nombre }}</h4>
         </div>
-        <div class="card-body">
+
+        {{-- CAMBIO: card-body con p-4 --}}
+        <div class="card-body p-4">
             <form action="{{ route('clientes.update', $cliente->idCli) }}" method="POST">
                 @csrf
                 @method('PUT')
 
                 <div class="mb-3">
                     <label for="Nombre" class="form-label">Nombre del Cliente</label>
-                    <input type="text" class="form-control @error('Nombre') is-invalid @enderror" id="Nombre" name="Nombre" value="{{ old('Nombre', $cliente->Nombre) }}" required>
-                    @error('Nombre') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                    {{-- CAMBIO: Input group con ícono --}}
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-user fa-fw"></i></span>
+                        <input type="text" class="form-control @error('Nombre') is-invalid @enderror" id="Nombre" name="Nombre" value="{{ old('Nombre', $cliente->Nombre) }}" required>
+                    </div>
+                    @error('Nombre') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                 </div>
                 
+                {{-- Botones --}}
                 <div class="d-flex justify-content-between mt-4">
-                    <a href="{{ route('clientes.index') }}" class="btn btn-secondary">Cancelar</a>
+                    <a href="{{ route('clientes.index') }}" class="btn btn-secondary">
+                        {{-- CAMBIO: Ícono añadido --}}
+                        <i class="fas fa-times me-1"></i> Cancelar
+                    </a>
                     
-                    {{-- Botón Actualizar (Solo visible si tiene permiso de 'editar') --}}
                     @if (Auth::user()->hasPermissionTo('clientes', 'editar'))
                         <button type="submit" class="btn btn-success">
-                            <i class="fas fa-sync"></i> Actualizar Cliente
+                            {{-- CAMBIO: Ícono estandarizado --}}
+                            <i class="fas fa-sync me-1"></i> Actualizar Cliente
                         </button>
                     @else
                         <span class="text-danger">No tienes permiso para actualizar este registro.</span>

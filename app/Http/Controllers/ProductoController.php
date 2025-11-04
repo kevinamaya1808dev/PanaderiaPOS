@@ -6,10 +6,9 @@ use App\Models\Producto;
 use App\Models\Categoria;
 use App\Models\Inventario;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
-// ¡IMPORTANTE! Añadir Storage para manejar archivos
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB; // <--- Referencia restaurada
+use Illuminate\Validation\Rule;   // <--- Referencia restaurada
+use Illuminate\Support\Facades\Storage; // Referencia para la imagen
 
 class ProductoController extends Controller
 {
@@ -29,6 +28,7 @@ class ProductoController extends Controller
     public function create()
     {
         $categorias = Categoria::all();
+        // Se mantiene solo $categorias como en tu código original
         return view('productos.create', compact('categorias'));
     }
 
@@ -37,7 +37,7 @@ class ProductoController extends Controller
      */
     public function store(Request $request)
     {
-        // ***** CAMBIO 1: Añadir validación para la imagen *****
+        // ***** CAMBIO: Añadir validación para la imagen *****
         $request->validate([
             'categoria_id' => 'required|exists:categorias,id',
             'nombre' => 'required|string|max:255',
@@ -52,7 +52,8 @@ class ProductoController extends Controller
         DB::beginTransaction();
 
         try {
-            // ***** CAMBIO 2: Preparar datos y manejar imagen *****
+            // ***** CAMBIO: Preparar datos y manejar imagen *****
+            // (Se quita 'imagen' de $request->only para manejarla por separado)
             $datosProducto = $request->only(['categoria_id', 'nombre', 'descripcion', 'precio']);
 
             if ($request->hasFile('imagen')) {
@@ -60,11 +61,12 @@ class ProductoController extends Controller
                 $path = $request->file('imagen')->store('productos', 'public');
                 $datosProducto['imagen'] = $path; // Añadir la ruta de la imagen
             }
+            // Si no se sube archivo, no se añade la clave 'imagen'
 
-            // 1. Crear el Producto
+            // 1. Crear el Producto (con o sin la clave 'imagen')
             $producto = Producto::create($datosProducto);
 
-            // 2. Crear el registro de Inventario inicial (vinculado al producto_id)
+            // 2. Crear el registro de Inventario inicial (lógica original)
             Inventario::create([
                 'producto_id' => $producto->id,
                 'stock' => $request->stock_inicial,
@@ -90,6 +92,7 @@ class ProductoController extends Controller
         $categorias = Categoria::all();
         // Cargar el inventario relacionado
         $producto->load('inventario'); 
+        // Se mantiene solo 'producto' y 'categorias'
         return view('productos.edit', compact('producto', 'categorias'));
     }
 
@@ -98,7 +101,7 @@ class ProductoController extends Controller
      */
     public function update(Request $request, Producto $producto)
     {
-        // ***** CAMBIO 3: Añadir validación para la nueva imagen *****
+        // ***** CAMBIO: Añadir validación para la nueva imagen *****
         $request->validate([
             'categoria_id' => 'required|exists:categorias,id',
             'nombre' => ['required', 'string', 'max:255', Rule::unique('productos')->ignore($producto->id)],
@@ -106,18 +109,20 @@ class ProductoController extends Controller
             'precio' => 'required|numeric|min:0.01',
             'imagen' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048', // 2MB max
             'cantidad_minima' => 'required|integer|min:0',
-            'stock' => 'required|integer|min:0', // El stock también puede ser editado
+            // 'stock' => 'required|integer|min:0', // Tu formulario edit deshabilita este campo,
+                                                      // pero si lo habilitas, descomenta esta validación.
         ]);
 
         DB::beginTransaction();
 
         try {
-            // ***** CAMBIO 4: Preparar datos y manejar actualización de imagen *****
+            // ***** CAMBIO: Preparar datos y manejar actualización de imagen *****
+            // (Se quita 'imagen' de $request->only)
             $datosProducto = $request->only(['categoria_id', 'nombre', 'descripcion', 'precio']);
 
             if ($request->hasFile('imagen')) {
                 // 1. Borrar la imagen antigua si existe
-                if ($producto->imagen) {
+                if ($producto->imagen && Storage::disk('public')->exists($producto->imagen)) {
                     Storage::disk('public')->delete($producto->imagen);
                 }
                 
@@ -125,13 +130,16 @@ class ProductoController extends Controller
                 $path = $request->file('imagen')->store('productos', 'public');
                 $datosProducto['imagen'] = $path; // Añadir la nueva ruta
             }
+            // Si no se sube archivo, $datosProducto no incluye 'imagen' y la BBDD no se toca.
 
             // 1. Actualizar Producto
             $producto->update($datosProducto);
 
-            // 2. Actualizar Inventario (Usando la relación hasOne)
+            // 2. Actualizar Inventario (lógica original)
+            // (Tu formulario edit solo envía 'cantidad_minima',
+            // el campo 'stock' está deshabilitado. Si lo habilitas, añade 'stock' => $request->stock aquí)
             $producto->inventario->update([
-                'stock' => $request->stock,
+                // 'stock' => $request->stock, // Descomenta si habilitas el campo 'stock'
                 'cantidad_minima' => $request->cantidad_minima,
             ]);
             
@@ -152,13 +160,12 @@ class ProductoController extends Controller
     {
         DB::beginTransaction();
         try {
-            // ***** CAMBIO 5: Eliminar la imagen del almacenamiento *****
-            if ($producto->imagen) {
+            // ***** CAMBIO: Eliminar la imagen del almacenamiento *****
+            if ($producto->imagen && Storage::disk('public')->exists($producto->imagen)) {
                 Storage::disk('public')->delete($producto->imagen);
             }
 
-            // El inventario se eliminará automáticamente si la FK tiene ON DELETE CASCADE, 
-            // pero es más seguro eliminarlo explícitamente primero.
+            // Lógica original para eliminar inventario
             if ($producto->inventario) {
                 $producto->inventario->delete();
             }
@@ -173,4 +180,3 @@ class ProductoController extends Controller
         }
     }
 }
-

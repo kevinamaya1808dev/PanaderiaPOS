@@ -2,32 +2,40 @@
 
 @section('content')
 <div class="container">
-    <div class="card shadow-sm mx-auto" style="max-width: 500px;">
-        <div class="card-header bg-primary text-white">
-            <h3 class="mb-0">Registrar Nuevo Cliente</h3>
+    {{-- Card centrado --}}
+    <div class="card shadow-sm border-0 mx-auto" style="max-width: 500px;">
+        
+        {{-- CAMBIO: Cabecera oscura y h4 para el título --}}
+        <div class="card-header bg-dark text-white border-0">
+            <h4 class="mb-0"><i class="fas fa-user-plus me-2"></i> Registrar Nuevo Cliente</h4>
         </div>
-        <div class="card-body">
 
-            @if (session('error'))
-                <div class="alert alert-danger">{{ session('error') }}</div>
-            @endif
+        {{-- CAMBIO: card-body con p-4 y sin alerta de sesión --}}
+        <div class="card-body p-4">
             
             <form action="{{ route('clientes.store') }}" method="POST">
                 @csrf
 
                 <div class="mb-3">
                     <label for="Nombre" class="form-label">Nombre del Cliente</label>
-                    <input type="text" class="form-control @error('Nombre') is-invalid @enderror" id="Nombre" name="Nombre" value="{{ old('Nombre') }}" required>
-                    @error('Nombre') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                    {{-- CAMBIO: Input group con ícono --}}
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-user fa-fw"></i></span>
+                        <input type="text" class="form-control @error('Nombre') is-invalid @enderror" id="Nombre" name="Nombre" value="{{ old('Nombre') }}" required>
+                    </div>
+                    @error('Nombre') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                 </div>
                 
                 <div class="d-flex justify-content-between mt-4">
-                    <a href="{{ route('clientes.index') }}" class="btn btn-secondary">Cancelar</a>
+                    <a href="{{ route('clientes.index') }}" class="btn btn-secondary">
+                        {{-- CAMBIO: Ícono añadido --}}
+                        <i class="fas fa-times me-1"></i> Cancelar
+                    </a>
                     
-                    {{-- Botón Guardar (Solo visible si tiene permiso de 'alta') --}}
                     @if (Auth::user()->hasPermissionTo('clientes', 'alta'))
                         <button type="submit" class="btn btn-success">
-                            <i class="fas fa-save"></i> Guardar Cliente
+                            {{-- CAMBIO: Ícono estandarizado --}}
+                            <i class="fas fa-save me-1"></i> Guardar Cliente
                         </button>
                     @else
                         <span class="text-danger">No tienes permiso para registrar clientes.</span>
