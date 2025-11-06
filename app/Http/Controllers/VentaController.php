@@ -167,4 +167,15 @@ class VentaController extends Controller
         // Pasamos esa URL a la nueva vista 'imprimir_pdf'
         return view('ventas.imprimir_pdf', compact('urlPdf'));
     }
+    public function generarTicketHtml(Venta $venta)
+    {
+        // Cargar las relaciones necesarias (igual que en la función PDF)
+        $venta->load('user', 'cliente', 'detalles.producto');
+
+        // ¡IMPORTANTE! Simplemente retornamos la vista.
+        // Laravel la compilará a HTML y la enviará.
+        // Usamos la misma vista 'ventas.ticket_pdf' que usa el PDF.
+        return view('ventas.ticket_pdf', compact('venta'));
+    }
 }
+

@@ -26,6 +26,7 @@ class CajaController extends Controller
         $saldoActual = 0;
         $ventasEfectivo = 0; // <-- NUEVO: Inicializar variable para ventas en efectivo
         $saldoMovimientos = 0; // <-- AÑADIDO: Inicializar saldoMovimientos
+        $ventasDelTurno = collect();
 
         if ($cajaAbierta) {
             // Obtener sus movimientos manuales
@@ -47,6 +48,14 @@ class CajaController extends Controller
                                     // ->where('caja_id', $cajaAbierta->id) // Si tuvieras caja_id en Ventas, sería más preciso
                                     ->sum('total');
             
+
+            //Obtener la LISTA de todas las ventas del turno
+            $ventasDelTurno = Venta::where('user_id', Auth::id())
+                                ->where('fecha_hora', '>=', $cajaAbierta->fecha_hora_apertura)
+                                ->with('detalles.producto') // ¡Carga los productos de cada venta!
+                                ->orderBy('fecha_hora', 'desc') // Mostrar la más reciente primero
+                                ->get();
+
             // <-- MODIFICADO: Añadir ventas en efectivo al saldo actual -->
             $saldoActual = $cajaAbierta->saldo_inicial + $saldoMovimientos + $ventasEfectivo;
         }
@@ -57,7 +66,8 @@ class CajaController extends Controller
             'movimientos', 
             'saldoActual', 
             'ventasEfectivo', 
-            'saldoMovimientos' // Pasar también el total de movimientos
+            'saldoMovimientos', // Pasar también el total de movimientos
+            'ventasDelTurno'
         ));
     }
 

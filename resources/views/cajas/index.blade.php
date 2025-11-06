@@ -78,13 +78,14 @@
 
                         @php 
                             // Esta variable $saldoMovimientos la calcula tu controlador
+                            // Pero la recalculamos aquí por si acaso, aunque ya debería venir de `index()`
                             $saldoMovimientos = $movimientos->sum(function($m){ return $m->tipo === 'ingreso' ? $m->monto : -$m->monto; });
                         @endphp
                         <p class="d-flex justify-content-between mb-1 {{ $saldoMovimientos >= 0 ? 'text-info' : 'text-danger' }}">
-                           <span>+/- Movimientos Manuales:</span>
-                           <span class="fw-bold">
+                            <span>+/- Movimientos Manuales:</span>
+                            <span class="fw-bold">
                                 {{ $saldoMovimientos >= 0 ? '+' : '-' }}${{ number_format(abs($saldoMovimientos), 2) }}
-                           </span>
+                            </span>
                         </p>
                         
                         <hr>
@@ -118,49 +119,105 @@
                 </div>
             </div>
 
-            {{-- Historial de Movimientos (Tu código, sin cambios) --}}
+            {{-- Historial de Movimientos--}}
             <div class="col-md-7 mb-4">
                 <div class="card shadow-lg h-100">
                     <div class="card-header bg-info text-white">
                         <h4 class="mb-0"><i class="fas fa-exchange-alt me-2"></i> Movimientos Registrados en Caja</h4>
                     </div>
                     <div class="card-body p-0">
-                        <div style="max-height: 450px; overflow-y: auto;">
-                               @if ($movimientos->isEmpty() && ($ventasEfectivo ?? 0) == 0 && !$cajaAbierta && !isset($cajaCerradaReciente)) 
-                                   <div class="alert alert-light text-center m-3">Aún no hay movimientos registrados.</div>
-                               @else
-                                <ul class="list-group list-group-flush">
-                                    {{-- Mostrar movimientos manuales --}}
-                                    @forelse ($movimientos as $movimiento)
-                                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                                            <div class="flex-grow-1">
-                                                <i class="fas {{ $movimiento->tipo === 'ingreso' ? 'fa-arrow-circle-up text-success' : 'fa-arrow-circle-down text-danger' }} me-2"></i>
-                                                {{ $movimiento->descripcion }} 
-                                                <small class="text-muted d-block">
-                                                    {{ $movimiento->created_at->format('H:i') }} - 
-                                                    {{ ucfirst($movimiento->metodo_pago) }}
-                                                    {{-- ¡NUEVO! Mostrar quién lo registró --}}
-                                                    @if($movimiento->user)
-                                                        - ({{ $movimiento->user->name }})
-                                                    @endif
-                                                </small>
-                                            </div>
-                                            <span class="fw-bold fs-6 {{ $movimiento->tipo === 'ingreso' ? 'text-success' : 'text-danger' }}">
-                                                {{ $movimiento->tipo === 'egreso' ? '-' : '+' }}${{ number_format($movimiento->monto, 2) }}
-                                            </span>
-                                        </li>
-                                    @empty
-                                        @if($cajaAbierta)
-                                            <li class="list-group-item text-center text-muted">No hay movimientos manuales registrados en este turno.</li>
-                                        @endif
-                                    @endforelse
-                                    
-                                    @if($cajaAbierta && $movimientos->isEmpty() && ($ventasEfectivo ?? 0) > 0)
-                                        <li class="list-group-item text-center text-muted">Solo se han registrado ventas en efectivo.</li>
-                                    @endif
-                                </ul>
+                        
+                        {{-- ESTE ES EL CÓDIGO DEL SNIPPET QUE TE ENVIÉ --}}
+                        @if($ventasDelTurno->isEmpty() && $movimientos->isEmpty())
+                            <p class="text-center p-3">No hay ventas ni movimientos manuales registrados en este turno.</p>
+                        
+                        @else
+                            
+                            <!-- 1. Tabla de Ventas del Turno (NUEVA) -->
+                            @if($ventasDelTurno->isNotEmpty())
+                                <h5 class="card-title pt-2 pb-2 border-bottom">Ventas del Turno</h5>
+                                
+                                <!-- Contenedor con scroll para la tabla de ventas -->
+                                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                                    <table class="table table-sm table-striped">
+                                        <thead class="thead-light">
+                                            <tr>
+                                                <th>Fecha</th>
+                                                <th>Productos</th>
+                                                <th>Total</th>
+                                                <th>Método de Pago</th>
+                                                <th>Acción</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                    @foreach($ventasDelTurno as $venta)
+                                        <tr>
+                                     <!-- Fecha de la venta (AHORA MUESTRA FECHA Y HORA) -->
+                                    <td>{{ \Carbon\Carbon::parse($venta->fecha_hora)->format('d/m/y') }}</td>
+
+                                    <!-- Lista de productos y cantidades -->
+                                <td>
+                             <ul class="list-unstyled mb-0" style="font-size: 0.9em;">
+                            @foreach($venta->detalles as $detalle)
+                             <li>
+                            {{ $detalle->cantidad }} x {{ $detalle->producto->nombre ?? 'Producto no encontrado' }}
+                            </li>
+                        @endforeach
+                    </ul>
+                </td>
+
+            <!-- Total y Pago (-->
+            <td>${{ number_format($venta->total, 2) }}</td>
+            <td>{{ ucfirst($venta->metodo_pago) }}</td>
+
+            <!-- Botón de Acción -->
+            <td>
+                <button class="btn btn-sm btn-outline-primary" 
+                        onclick="imprimirTicket({{ $venta->id }})" 
+                                        title="Reimprimir Ticket">
+                                         <i class="fas fa-print"></i>
+                                            </button>
+                                             </td>
+                                            </tr>
+                                        @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
                             @endif
-                        </div>
+
+                            <!-- 2. Tabla de Movimientos Manuales (Existente, pero ahora con título) -->
+                            @if($movimientos->isNotEmpty())
+                                <h5 class="card-title pt-3 pb-2 border-bottom">Movimientos Manuales</h5>
+                                
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead class="thead-light">
+                                            <tr>
+                                                <th>Fecha</th>
+                                                <th>Tipo</th>
+                                                <th>Descripción</th>
+                                                <th>Monto</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach($movimientos as $mov)
+                                                <!-- Aplicar clase de color según el tipo de movimiento -->
+                                                <tr class="{{ $mov->tipo == 'ingreso' ? 'text-success' : 'text-danger' }}">
+                                                    <td>{{ $mov->created_at->format('d/m/y') }}</td>
+                                                    <td>{{ ucfirst($mov->tipo) }}</td>
+                                                    <td>{{ $mov->descripcion ?? 'N/A' }}</td>
+                                                    <td>
+                                                        {{ $mov->tipo == 'ingreso' ? '+' : '-' }}
+                                                        ${{ number_format($mov->monto, 2) }}
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            @endif
+
+                        @endif
                     </div>
                 </div>
             </div>
@@ -170,7 +227,7 @@
 
 
 {{-- ========================================================== --}}
-{{-- ¡NUEVO! Modal para Registrar Movimiento --}}
+         {{-- Modal para Registrar Movimiento --}}
 {{-- ========================================================== --}}
 @if ($cajaAbierta)
 <div class="modal fade" id="movimientoModal" tabindex="-1" aria-labelledby="movimientoModalLabel" aria-hidden="true">
@@ -221,3 +278,51 @@
 </div>
 @endif
 @endsection
+
+@push('scripts')
+<script>
+    /**
+     * Función para imprimir un ticket (VERSIÓN CORREGIDA)
+     * Esta versión NO limpia el iframe, para evitar
+     * que el diálogo de impresión muestre una página en blanco.
+     */
+    function imprimirTicket(ventaId) {
+        // 1. Construir la URL del ticket
+        const url = `{{ url('/ventas/ticket/html/') }}/${ventaId}`;
+
+        // 2. Obtener o crear el iframe
+        let iframe = document.getElementById('ticket-print-frame');
+        if (!iframe) {
+            iframe = document.createElement('iframe');
+            iframe.id = 'ticket-print-frame';
+            iframe.style.display = 'none'; // Sigue siendo invisible
+            document.body.appendChild(iframe);
+        }
+
+        // 3. Asignar la URL al iframe
+        iframe.src = url;
+
+        // 4. Esperar a que el iframe cargue el contenido HTML
+        iframe.onload = function() {
+            try {
+                // 5. Enviar el comando de impresión al iframe
+                iframe.contentWindow.print();
+            } catch (e) {
+                console.error("Error al intentar imprimir el iframe:", e);
+                alert("Hubo un error al preparar la impresión.");
+            }
+            
+            // ¡YA NO LIMPIAMOS EL IFRAME!
+            // La línea setTimeout(...) se ha eliminado.
+            // Esto permite que el diálogo de impresión
+            // tenga tiempo de leer el contenido.
+        };
+
+        // 7. (Manejo de error) Si el iframe no carga
+        iframe.onerror = function() {
+            console.error("Error: No se pudo cargar el ticket en el iframe. URL: " + url);
+            alert("Error al cargar el ticket. Verifique la conexión.");
+        };
+    }
+</script>
+@endpush

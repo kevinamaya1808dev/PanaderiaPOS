@@ -204,4 +204,5 @@ Route::delete('categorias/{categoria}', [CategoriaController::class, 'destroy'])
         ->middleware('permiso:ventas,mostrar'); // O el permiso que consideres
 
     Route::get('ventas/imprimir/{venta}', [VentaController::class, 'imprimirTicket'])->name('ventas.imprimir');
+    Route::get('/ventas/ticket/html/{venta}', [VentaController::class, 'generarTicketHtml'])->name('ventas.ticket.html');
 });
