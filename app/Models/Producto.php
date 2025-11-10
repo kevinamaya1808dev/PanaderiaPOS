@@ -4,10 +4,15 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+// ***** CAMBIO 1: Importar SoftDeletes *****
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Producto extends Model
 {
     use HasFactory;
+
+    // ***** CAMBIO 2: Usar SoftDeletes *****
+    use SoftDeletes;
 
     protected $table = 'productos'; 
     protected $fillable = [

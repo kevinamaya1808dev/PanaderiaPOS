@@ -124,13 +124,12 @@
                                              class="img-fluid rounded" 
                                              style="display: none; max-width: 100%; max-height: 200px; object-fit: contain; margin: 0 auto;"/>
                                         
+                                        {{-- El placeholder tiene 'd-flex' por defecto --}}
                                         <div id="image-placeholder" class="text-muted d-flex align-items-center justify-content-center" style="height: 200px;">
                                             <i class="fas fa-image fa-3x"></i>
                                         </div>
 
-                                        {{-- ====================================================== --}}
-                                        {{-- CAMBIO: Botón reemplazado por una "X" grande y roja   --}}
-                                        {{-- ====================================================== --}}
+                                        {{-- "X" roja para quitar la imagen seleccionada --}}
                                         <button type="button" id="clear-image-btn" 
                                                 class="position-absolute" 
                                                 style="display: none; top: 0.5rem; right: 0.75rem; z-index: 10; background: none; border: none; font-size: 2rem; color: #dc3545; line-height: 1; cursor: pointer; padding: 0;" 
@@ -169,7 +168,9 @@
 @endsection
 
 
-{{-- El Script de JavaScript no necesita cambios, funciona igual --}}
+{{-- ========================================================== --}}
+{{-- CAMBIO: Script corregido para usar clases d-none/d-flex   --}}
+{{-- ========================================================== --}}
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function () {
@@ -186,7 +187,10 @@
                 reader.onload = function(e) {
                     imagePreview.src = e.target.result;
                     imagePreview.style.display = 'block';
-                    imagePlaceholder.style.display = 'none';
+                    
+                    // CAMBIO: Usamos clases de Bootstrap para ocultar
+                    imagePlaceholder.classList.add('d-none');
+                    
                     clearImageBtn.style.display = 'block'; 
                     imagePreviewContainer.style.height = 'auto'; 
                 }
@@ -194,7 +198,10 @@
             } else {
                 imagePreview.src = '#';
                 imagePreview.style.display = 'none';
-                imagePlaceholder.style.display = 'flex'; 
+                
+                // CAMBIO: Usamos clases de Bootstrap para mostrar
+                imagePlaceholder.classList.remove('d-none'); 
+                
                 clearImageBtn.style.display = 'none'; 
                 imagePreviewContainer.style.height = ''; 
             }

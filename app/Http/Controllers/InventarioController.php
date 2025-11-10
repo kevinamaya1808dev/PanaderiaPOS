@@ -7,6 +7,9 @@ use App\Models\Producto;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
+// ===== CAMBIO: Añadir Categoria para poder usarla =====
+use App\Models\Categoria;
+
 class InventarioController extends Controller
 {
     /**
@@ -17,9 +20,13 @@ class InventarioController extends Controller
         // Obtener todos los productos con su registro de inventario asociado
         $productos = Producto::with('inventario', 'categoria')->get();
 
+        // ===== CAMBIO: Añadir la lista de categorías para el filtro =====
+        $categorias = Categoria::all();
+
         // NOTA: El permiso 'inventario,mostrar' ya protege esta ruta.
 
-        return view('inventario.index', compact('productos'));
+        // ===== CAMBIO: Pasar $categorias a la vista =====
+        return view('inventario.index', compact('productos', 'categorias'));
     }
 
     // Aquí irían métodos para añadir stock manualmente (ajustes o entradas rápidas)
