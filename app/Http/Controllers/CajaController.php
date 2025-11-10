@@ -211,7 +211,12 @@ class CajaController extends Controller
     /**
  * Exporta las ventas del turno actual a un archivo CSV.
  */
-public function exportarVentasTurno()
+/**
+     * Exporta las ventas del turno actual a un archivo CSV.
+     *
+     * (VERSIÓN 3 - AGRUPANDO PRODUCTOS POR VENTA)
+     */
+    public function exportarVentasTurno()
     {
         // 1. Encontrar la caja abierta del usuario
         $cajaAbierta = \App\Models\Caja::where('user_id', \Illuminate\Support\Facades\Auth::id())
@@ -224,9 +229,9 @@ public function exportarVentasTurno()
 
         // 2. Obtener todas las ventas Y sus detalles (productos) de este turno
         $ventas = \App\Models\Venta::with('detalles.producto', 'user') // Carga las relaciones
-            ->where('user_id', \Illuminate\Support\Facades\Auth::id()) // Solo del usuario actual
-            ->where('fecha_hora', '>=', $cajaAbierta->fecha_hora_apertura) // Desde que abrió
-            ->orderBy('fecha_hora', 'asc') // Ordenadas por fecha
+            ->where('user_id', \Illuminate\Support\Facades\Auth::id())
+            ->where('fecha_hora', '>=', $cajaAbierta->fecha_hora_apertura)
+            ->orderBy('fecha_hora', 'asc')
             ->get();
 
         if ($ventas->isEmpty()) {
@@ -256,41 +261,96 @@ public function exportarVentasTurno()
             fputcsv($file, [
                 'ID Venta', 
                 'Fecha', 
-                'Hora', 
                 'Cajero', 
                 'Método Pago',
-                'Producto', 
-                'Cantidad', 
-                'Precio Unitario', 
-                'Importe Total'
+                'Productos (Desglose)', 
+                'Total Venta'           
             ]);
 
             // 6. Llenar con los datos
             foreach ($ventas as $venta) {
-                // (Garantía de fecha) Usamos Carbon::parse por si el modelo no tiene $casts
+                
                 $fechaHora = \Carbon\Carbon::parse($venta->fecha_hora);
 
-                // Por cada venta, añadimos una fila por cada producto
+                // --- ¡unir productos! ---
+                $productosArray = [];
                 foreach ($venta->detalles as $detalle) {
-                    fputcsv($file, [
-                        $venta->id,
-                        $fechaHora->format('d/m/Y'),
-                        $fechaHora->format('h:i A'),
-                        $venta->user->name ?? 'N/A',
-                        ucfirst($venta->metodo_pago),
-                        
-                        // --- ¡LA CORRECCIÓN ESTÁ AQUÍ! ---
-                        // Antes decía ->name, ahora dice ->nombre
-                        $detalle->producto->nombre ?? 'N/A', 
-                        // --- FIN DE LA CORRECCIÓN ---
-
-                        $detalle->cantidad,
-                        $detalle->precio_unitario, 
-                        $detalle->importe
-                    ]);
+                    $nombreProducto = $detalle->producto->nombre ?? 'N/A';
+                    $productosArray[] = "{$detalle->cantidad} x {$nombreProducto}";
                 }
+                
+                // Unimos todos los productos con un salto de línea (Excel lo leerá)
+                $productosString = implode("\n", $productosArray);
+
+                fputcsv($file, [
+                    $venta->id,
+                    $fechaHora->format('d/m/Y'),
+                    $venta->user->name ?? 'N/A',
+                    ucfirst($venta->metodo_pago),
+                    $productosString,    
+                    $venta->total          
+                ]);
             }
+            
             fclose($file);
         }, 200, $headers);
+    }
+public function exportarVentasTurnoPDF()
+    {
+        // 1. Obtener la caja abierta (igual que en exportarVentasTurno)
+        $cajaAbierta = \App\Models\Caja::where('user_id', \Illuminate\Support\Facades\Auth::id())
+                            ->where('estado', 'abierta')
+                            ->first();
+
+        if (!$cajaAbierta) {
+            return redirect()->route('cajas.index')->with('error', 'No hay ninguna caja abierta para exportar.');
+        }
+
+        // 2. Necesitamos RECOGER TODOS LOS DATOS que la vista `index` calcula,
+        //    porque el PDF también necesita los resúmenes.
+
+        // Ventas (con detalles)
+        $ventas = \App\Models\Venta::with('detalles.producto', 'user')
+            ->where('user_id', \Illuminate\Support\Facades\Auth::id())
+            ->where('fecha_hora', '>=', $cajaAbierta->fecha_hora_apertura)
+            ->orderBy('fecha_hora', 'asc')
+            ->get();
+        
+        // Movimientos
+        $movimientos = \App\Models\MovimientoCaja::where('caja_id', $cajaAbierta->id)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        // 3. Calcular Resúmenes (igual que en la función index)
+        
+        // Ventas en Efectivo
+        $ventasEfectivo = $ventas->where('metodo_pago', 'efectivo')->sum('total');
+
+        // Saldo Movimientos Manuales
+        $ingresosManuales = $movimientos->where('tipo', 'ingreso')->sum('monto');
+        $egresosManuales = $movimientos->where('tipo', '!=', 'ingreso')->sum('monto');
+        $saldoMovimientos = $ingresosManuales - $egresosManuales;
+
+        // Saldo Actual Total
+        $saldoActual = $cajaAbierta->saldo_inicial + $ventasEfectivo + $saldoMovimientos;
+
+        // 4. Preparar los datos para la vista
+        $data = [
+            'cajaAbierta' => $cajaAbierta,
+            'ventas' => $ventas,
+            'movimientos' => $movimientos,
+            'ventasEfectivo' => $ventasEfectivo,
+            'saldoMovimientos' => $saldoMovimientos,
+            'saldoActual' => $saldoActual
+        ];
+
+        // 5. Generar y enviar el PDF
+        // Usamos la NUEVA vista 'reporte_ventas_pdf'
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('cajas.reporte_ventas_pdf', $data)
+                                        ->setPaper('a4', 'portrait'); // 'portrait' (vertical) o 'landscape' (horizontal)
+
+        // Descargar (o mostrar en navegador)
+        $fileName = "Reporte_Ventas_Caja_{$cajaAbierta->id}_{$cajaAbierta->fecha_hora_apertura->format('Y-m-d')}.pdf";
+        return $pdf->stream($fileName); // stream() lo muestra, download() lo descarga
     }
 }

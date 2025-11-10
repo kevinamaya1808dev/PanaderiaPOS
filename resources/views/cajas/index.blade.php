@@ -77,8 +77,6 @@
                         </p>
 
                         @php 
-                            // Esta variable $saldoMovimientos la calcula tu controlador
-                            // Pero la recalculamos aquí por si acaso, aunque ya debería venir de `index()`
                             $saldoMovimientos = $movimientos->sum(function($m){ return $m->tipo === 'ingreso' ? $m->monto : -$m->monto; });
                         @endphp
                         <p class="d-flex justify-content-between mb-1 {{ $saldoMovimientos >= 0 ? 'text-info' : 'text-danger' }}">
@@ -94,8 +92,7 @@
                         <small class="text-muted">(Saldo Inicial + Ventas Efectivo +/- Mov. Manuales)</small> 
                     </div>
                     
-                    {{-- ***** AQUÍ ESTÁ LA SECCIÓN DE BOTONES CORREGIDA ***** --}}
-                    {{-- Solo hay UN card-footer ahora, con los 3 botones --}}
+                    {{-- FOOTER DE BOTONES CORREGIDO Y ACTUALIZADO  --}}
                     <div class="card-footer d-flex justify-content-between p-3">
 
                         {{-- 1. Botón de Registrar Movimiento --}}
@@ -105,11 +102,25 @@
                             </button>
                         @endif
 
-                        {{-- 2. ¡NUEVO BOTÓN DE EXPORTAR! --}}
+                        {{-- 2. BOTÓN DESPLEGABLE DE REPORTE --}}
                         @if (Auth::user()->hasPermissionTo('cajas', 'mostrar'))
-                            <a href="{{ route('cajas.exportar') }}" class="btn btn-success">
-                                <i class="fas fa-file-excel me-2"></i> Reporte
-                            </a>
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-success dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-file-excel me-2"></i> Exportar Reporte
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li>
+                                        <a class="dropdown-item" href="{{ route('cajas.exportar') }}">
+                                            <i class="fas fa-file-csv me-2 text-success"></i> Excel 
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="{{ route('cajas.exportar.pdf') }}">
+                                            <i class="fas fa-file-pdf me-2 text-danger"></i> PDF
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
                         @endif
 
                         {{-- 3. Botón de Cierre --}}
@@ -123,6 +134,7 @@
                         @endif
                         
                     </div>
+                    {{-- ***** FIN DEL BLOQUE DE BOTONES ***** --}}
                 </div>
             </div>
 
@@ -134,17 +146,15 @@
                     </div>
                     <div class="card-body p-0">
                         
-                        {{-- ESTE ES EL CÓDIGO DEL SNIPPET QUE TE ENVIÉ --}}
                         @if($ventasDelTurno->isEmpty() && $movimientos->isEmpty())
                             <p class="text-center p-3">No hay ventas ni movimientos manuales registrados en este turno.</p>
                         
                         @else
                             
-                            <!-- 1. Tabla de Ventas del Turno (NUEVA) -->
+                            <!-- 1. Tabla de Ventas del Turno -->
                             @if($ventasDelTurno->isNotEmpty())
                                 <h5 class="card-title pt-2 pb-2 border-bottom">Ventas del Turno</h5>
                                 
-                                <!-- Contenedor con scroll para la tabla de ventas -->
                                 <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
                                     <table class="table table-sm table-striped">
                                         <thead class="thead-light">
@@ -159,10 +169,7 @@
                                         <tbody>
                                     @foreach($ventasDelTurno as $venta)
                                         <tr>
-                                            <!-- Fecha de la venta (AHORA MUESTRA FECHA Y HORA) -->
                                             <td>{{ \Carbon\Carbon::parse($venta->fecha_hora)->format('d/m/y') }}</td>
-
-                                            <!-- Lista de productos y cantidades -->
                                             <td>
                                                 <ul class="list-unstyled mb-0" style="font-size: 0.9em;">
                                                     @foreach($venta->detalles as $detalle)
@@ -172,12 +179,8 @@
                                                     @endforeach
                                                 </ul>
                                             </td>
-
-                                            <!-- Total y Pago (-->
                                             <td>${{ number_format($venta->total, 2) }}</td>
                                             <td>{{ ucfirst($venta->metodo_pago) }}</td>
-
-                                            <!-- Botón de Acción -->
                                             <td>
                                                 <button class="btn btn-sm btn-outline-primary" 
                                                         onclick="imprimirTicket({{ $venta->id }})" 
@@ -192,7 +195,7 @@
                                 </div>
                             @endif
 
-                            <!-- 2. Tabla de Movimientos Manuales (Existente, pero ahora con título) -->
+                            <!-- 2. Tabla de Movimientos Manuales -->
                             @if($movimientos->isNotEmpty())
                                 <h5 class="card-title pt-3 pb-2 border-bottom">Movimientos Manuales</h5>
                                 
@@ -208,7 +211,6 @@
                                         </thead>
                                         <tbody>
                                             @foreach($movimientos as $mov)
-                                                <!-- Aplicar clase de color según el tipo de movimiento -->
                                                 <tr class="{{ $mov->tipo == 'ingreso' ? 'text-success' : 'text-danger' }}">
                                                     <td>{{ $mov->created_at->format('d/m/y') }}</td>
                                                     <td>{{ ucfirst($mov->tipo) }}</td>
@@ -290,8 +292,6 @@
 <script>
     /**
      * Función para imprimir un ticket (VERSIÓN CORREGIDA)
-     * Esta versión NO limpia el iframe, para evitar
-     * que el diálogo de impresión muestre una página en blanco.
      */
     function imprimirTicket(ventaId) {
         // 1. Construir la URL del ticket

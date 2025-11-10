@@ -211,7 +211,12 @@ Route::delete('categorias/{categoria}', [CategoriaController::class, 'destroy'])
     Route::get('/dashboard-data', [DashboardController::class, 'getDashboardData'])->name('dashboard.data');
 
     // Ruta para exportar el reporte de ventas del turno
-Route::get('/cajas/exportar', [CajaController::class, 'exportarVentasTurno'])
+    Route::get('/cajas/exportar', [CajaController::class, 'exportarVentasTurno'])
      ->name('cajas.exportar')
      ->middleware('auth'); // Asegurar que solo usuarios logueados
+
+    Route::get('/cajas/exportar-pdf', [CajaController::class, 'exportarVentasTurnoPDF'])
+     ->name('cajas.exportar.pdf')
+     ->middleware('auth');
+    
 });
