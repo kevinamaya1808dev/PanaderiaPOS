@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Caja;
-use App\Models\Venta; // <-- Asegurar que Venta esté importado
-use App\Models\MovimientoCaja; // <-- ¡IMPORTANTE AÑADIR ESTE!
+use App\Models\Venta; 
+use App\Models\MovimientoCaja; 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -206,5 +206,91 @@ class CajaController extends Controller
         ]);
         
         return redirect()->route('cajas.index')->with('success', 'Movimiento manual registrado exitosamente.');
+    }
+
+    /**
+ * Exporta las ventas del turno actual a un archivo CSV.
+ */
+public function exportarVentasTurno()
+    {
+        // 1. Encontrar la caja abierta del usuario
+        $cajaAbierta = \App\Models\Caja::where('user_id', \Illuminate\Support\Facades\Auth::id())
+                            ->where('estado', 'abierta')
+                            ->first();
+
+        if (!$cajaAbierta) {
+            return redirect()->route('cajas.index')->with('error', 'No hay ninguna caja abierta para exportar.');
+        }
+
+        // 2. Obtener todas las ventas Y sus detalles (productos) de este turno
+        $ventas = \App\Models\Venta::with('detalles.producto', 'user') // Carga las relaciones
+            ->where('user_id', \Illuminate\Support\Facades\Auth::id()) // Solo del usuario actual
+            ->where('fecha_hora', '>=', $cajaAbierta->fecha_hora_apertura) // Desde que abrió
+            ->orderBy('fecha_hora', 'asc') // Ordenadas por fecha
+            ->get();
+
+        if ($ventas->isEmpty()) {
+            return redirect()->route('cajas.index')->with('error', 'No hay ventas para exportar en este turno.');
+        }
+
+        // 3. Definir el nombre del archivo y las cabeceras
+        $fileName = "Reporte_Ventas_Caja_{$cajaAbierta->id}_{$cajaAbierta->fecha_hora_apertura->format('Y-m-d')}.csv";
+        
+        $headers = [
+            "Content-type"        => "text/csv",
+            "Content-Disposition" => "attachment; filename=$fileName",
+            "Pragma"              => "no-cache",
+            "Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
+            "Expires"             => "0"
+        ];
+
+        // 4. Crear la respuesta (el archivo)
+        return response()->stream(function() use ($ventas) {
+            
+            $file = fopen('php://output', 'w');
+            
+            // (IMPORTANTE) Añadir un BOM para que Excel lea acentos y 'ñ'
+            fputs($file, "\xEF\xBB\xBF");
+
+            // 5. Añadir la fila de Títulos (Cabecera)
+            fputcsv($file, [
+                'ID Venta', 
+                'Fecha', 
+                'Hora', 
+                'Cajero', 
+                'Método Pago',
+                'Producto', 
+                'Cantidad', 
+                'Precio Unitario', 
+                'Importe Total'
+            ]);
+
+            // 6. Llenar con los datos
+            foreach ($ventas as $venta) {
+                // (Garantía de fecha) Usamos Carbon::parse por si el modelo no tiene $casts
+                $fechaHora = \Carbon\Carbon::parse($venta->fecha_hora);
+
+                // Por cada venta, añadimos una fila por cada producto
+                foreach ($venta->detalles as $detalle) {
+                    fputcsv($file, [
+                        $venta->id,
+                        $fechaHora->format('d/m/Y'),
+                        $fechaHora->format('h:i A'),
+                        $venta->user->name ?? 'N/A',
+                        ucfirst($venta->metodo_pago),
+                        
+                        // --- ¡LA CORRECCIÓN ESTÁ AQUÍ! ---
+                        // Antes decía ->name, ahora dice ->nombre
+                        $detalle->producto->nombre ?? 'N/A', 
+                        // --- FIN DE LA CORRECCIÓN ---
+
+                        $detalle->cantidad,
+                        $detalle->precio_unitario, 
+                        $detalle->importe
+                    ]);
+                }
+            }
+            fclose($file);
+        }, 200, $headers);
     }
 }

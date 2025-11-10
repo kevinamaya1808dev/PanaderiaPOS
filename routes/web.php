@@ -205,4 +205,13 @@ Route::delete('categorias/{categoria}', [CategoriaController::class, 'destroy'])
 
     Route::get('ventas/imprimir/{venta}', [VentaController::class, 'imprimirTicket'])->name('ventas.imprimir');
     Route::get('/ventas/ticket/html/{venta}', [VentaController::class, 'generarTicketHtml'])->name('ventas.ticket.html');
+    
+    
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard-data', [DashboardController::class, 'getDashboardData'])->name('dashboard.data');
+
+    // Ruta para exportar el reporte de ventas del turno
+Route::get('/cajas/exportar', [CajaController::class, 'exportarVentasTurno'])
+     ->name('cajas.exportar')
+     ->middleware('auth'); // Asegurar que solo usuarios logueados
 });

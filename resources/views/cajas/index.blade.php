@@ -94,17 +94,25 @@
                         <small class="text-muted">(Saldo Inicial + Ventas Efectivo +/- Mov. Manuales)</small> 
                     </div>
                     
-                    {{-- ***** MODIFICADO: Añadido botón de Movimiento ***** --}}
+                    {{-- ***** AQUÍ ESTÁ LA SECCIÓN DE BOTONES CORREGIDA ***** --}}
+                    {{-- Solo hay UN card-footer ahora, con los 3 botones --}}
                     <div class="card-footer d-flex justify-content-between p-3">
-                        
-                        {{-- 1. Botón para abrir el Modal --}}
-                        @if (Auth::user()->hasPermissionTo('cajas', 'editar')) {{-- O el permiso que definas --}}
+
+                        {{-- 1. Botón de Registrar Movimiento --}}
+                        @if (Auth::user()->hasPermissionTo('cajas', 'editar'))
                             <button type="button" class="btn btn-info" data-bs-toggle="modal" data-bs-target="#movimientoModal">
-                                <i class="fas fa-exchange-alt me-2"></i> Registrar Movimiento
+                                <i class="fas fa-exchange-alt me-2"></i> Movimiento
                             </button>
                         @endif
 
-                        {{-- 2. Botón de Cierre --}}
+                        {{-- 2. ¡NUEVO BOTÓN DE EXPORTAR! --}}
+                        @if (Auth::user()->hasPermissionTo('cajas', 'mostrar'))
+                            <a href="{{ route('cajas.exportar') }}" class="btn btn-success">
+                                <i class="fas fa-file-excel me-2"></i> Reporte
+                            </a>
+                        @endif
+
+                        {{-- 3. Botón de Cierre --}}
                         @if (Auth::user()->hasPermissionTo('cajas', 'eliminar'))
                             <form action="{{ route('cajas.cerrar') }}" method="POST" onsubmit="return confirm('¿Estás seguro de cerrar la caja? Se registrará un movimiento con el total de ventas en efectivo.');">
                                 @csrf
@@ -112,9 +120,8 @@
                                     <i class="fas fa-lock me-2"></i> Cerrar Caja
                                 </button>
                             </form>
-                        @else
-                            <div class="alert alert-warning text-center py-2 mb-0">No tienes permiso para cerrar la caja.</div>
                         @endif
+                        
                     </div>
                 </div>
             </div>
@@ -152,34 +159,34 @@
                                         <tbody>
                                     @foreach($ventasDelTurno as $venta)
                                         <tr>
-                                     <!-- Fecha de la venta (AHORA MUESTRA FECHA Y HORA) -->
-                                    <td>{{ \Carbon\Carbon::parse($venta->fecha_hora)->format('d/m/y') }}</td>
+                                            <!-- Fecha de la venta (AHORA MUESTRA FECHA Y HORA) -->
+                                            <td>{{ \Carbon\Carbon::parse($venta->fecha_hora)->format('d/m/y') }}</td>
 
-                                    <!-- Lista de productos y cantidades -->
-                                <td>
-                             <ul class="list-unstyled mb-0" style="font-size: 0.9em;">
-                            @foreach($venta->detalles as $detalle)
-                             <li>
-                            {{ $detalle->cantidad }} x {{ $detalle->producto->nombre ?? 'Producto no encontrado' }}
-                            </li>
-                        @endforeach
-                    </ul>
-                </td>
+                                            <!-- Lista de productos y cantidades -->
+                                            <td>
+                                                <ul class="list-unstyled mb-0" style="font-size: 0.9em;">
+                                                    @foreach($venta->detalles as $detalle)
+                                                        <li>
+                                                            {{ $detalle->cantidad }} x {{ $detalle->producto->nombre ?? 'Producto no encontrado' }}
+                                                        </li>
+                                                    @endforeach
+                                                </ul>
+                                            </td>
 
-            <!-- Total y Pago (-->
-            <td>${{ number_format($venta->total, 2) }}</td>
-            <td>{{ ucfirst($venta->metodo_pago) }}</td>
+                                            <!-- Total y Pago (-->
+                                            <td>${{ number_format($venta->total, 2) }}</td>
+                                            <td>{{ ucfirst($venta->metodo_pago) }}</td>
 
-            <!-- Botón de Acción -->
-            <td>
-                <button class="btn btn-sm btn-outline-primary" 
-                        onclick="imprimirTicket({{ $venta->id }})" 
-                                        title="Reimprimir Ticket">
-                                         <i class="fas fa-print"></i>
-                                            </button>
-                                             </td>
-                                            </tr>
-                                        @endforeach
+                                            <!-- Botón de Acción -->
+                                            <td>
+                                                <button class="btn btn-sm btn-outline-primary" 
+                                                        onclick="imprimirTicket({{ $venta->id }})" 
+                                                        title="Reimprimir Ticket">
+                                                    <i class="fas fa-print"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    @endforeach
                                         </tbody>
                                     </table>
                                 </div>
@@ -227,7 +234,7 @@
 
 
 {{-- ========================================================== --}}
-         {{-- Modal para Registrar Movimiento --}}
+        {{-- Modal para Registrar Movimiento --}}
 {{-- ========================================================== --}}
 @if ($cajaAbierta)
 <div class="modal fade" id="movimientoModal" tabindex="-1" aria-labelledby="movimientoModalLabel" aria-hidden="true">
@@ -311,11 +318,6 @@
                 console.error("Error al intentar imprimir el iframe:", e);
                 alert("Hubo un error al preparar la impresión.");
             }
-            
-            // ¡YA NO LIMPIAMOS EL IFRAME!
-            // La línea setTimeout(...) se ha eliminado.
-            // Esto permite que el diálogo de impresión
-            // tenga tiempo de leer el contenido.
         };
 
         // 7. (Manejo de error) Si el iframe no carga
