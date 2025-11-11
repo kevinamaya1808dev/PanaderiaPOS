@@ -60,13 +60,14 @@ class VentaController extends Controller
         // 1. Validar datos básicos de la venta
         $request->validate([
             'cliente_id' => 'nullable|exists:clientes,idCli',
-            'metodo_pago' => 'required|string|in:efectivo,tarjeta,transferencia,credito',
+            'metodo_pago' => 'required|string|in:efectivo,tarjeta,pendiente',
             'total' => 'required|numeric|min:0.01',
             'detalles' => 'required|array|min:1', // Asegura que haya al menos un producto
             'detalles.*.producto_id' => 'required|exists:productos,id',
             'detalles.*.cantidad' => 'required|integer|min:1',
             'detalles.*.precio_unitario' => 'required|numeric|min:0',
             'detalles.*.importe' => 'required|numeric|min:0',
+            'status' => 'required|string|in:Pagada,Pendiente',
         ]);
 
         // 2. Verificar si la caja está abierta (doble chequeo)
@@ -87,6 +88,7 @@ class VentaController extends Controller
                 'total' => $request->total,
                 'monto_recibido' => $request->monto_recibido ?? $request->total, // Asumir pago exacto si no se envía
                 'monto_entregado' => $request->monto_entregado ?? 0,
+                'status' => $request->status,
             ]);
 
             // 4. Crear los Detalles de la Venta y Actualizar Stock

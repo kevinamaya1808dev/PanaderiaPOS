@@ -8,22 +8,15 @@
 
     <div class="alert alert-info d-flex justify-content-between align-items-center">
         <span>Define qué acciones puede realizar este cargo en cada módulo.</span>
-        {{-- NUEVO: Botón único para Seleccionar/Deseleccionar Todos --}}
         <button type="button" class="btn btn-sm btn-outline-primary" id="toggle-all-permissions">
             <i class="fas fa-tasks me-1"></i> Seleccionar/Deseleccionar Todos
         </button>
     </div>
 
-    {{-- Mensajes de Sesión --}}
-    @if (session('success'))
-        <div class="alert alert-success">{{ session('success') }}</div>
-    @endif
-    @if (session('error'))
-        <div class="alert alert-danger">{{ session('error') }}</div>
-    @endif
-    @if (session('warning'))
-        <div class="alert alert-warning">{{ session('warning') }}</div>
-    @endif
+    {{-- ========================================================== --}}
+    {{-- CAMBIO: Bloque de Mensajes de Sesión eliminado para evitar duplicados --}}
+    {{-- (El bloque @if session('success') ... @endif que estaba aquí se ha borrado) --}}
+    {{-- ========================================================== --}}
 
     {{-- Formulario que enviará toda la matriz al PermisoController@update --}}
     <form action="{{ route('cargos.permisos.update', $cargo->id) }}" method="POST">
@@ -80,28 +73,38 @@
         </div>
     </form>
 </div>
+@endsection {{-- El @endsection termina aquí --}}
 
-{{-- Script para el botón "Seleccionar/Deseleccionar Todos" --}}
+
+{{-- ========================================================== --}}
+{{-- CAMBIO: El script se ha movido a un @push para que Laravel lo cargue correctamente --}}
+{{-- ========================================================== --}}
+@push('scripts')
 <script>
-    document.getElementById('toggle-all-permissions').addEventListener('click', function() {
-        const checkboxes = document.querySelectorAll('#permissions-table .permission-checkbox');
+    document.addEventListener('DOMContentLoaded', function() {
+        const toggleButton = document.getElementById('toggle-all-permissions');
         
-        // Determinar si todos están marcados actualmente
-        let allChecked = true;
-        checkboxes.forEach(function(checkbox) {
-            if (!checkbox.checked) {
-                allChecked = false;
-            }
-        });
+        if (toggleButton) {
+            toggleButton.addEventListener('click', function() {
+                const checkboxes = document.querySelectorAll('#permissions-table .permission-checkbox');
+                
+                // Determinar si todos están marcados actualmente
+                let allChecked = true;
+                checkboxes.forEach(function(checkbox) {
+                    if (!checkbox.checked) {
+                        allChecked = false;
+                    }
+                });
 
-        // La nueva acción será lo contrario del estado actual
-        const newState = !allChecked; 
+                // La nueva acción será lo contrario del estado actual
+                const newState = !allChecked; 
 
-        // Aplicar el nuevo estado a todos los checkboxes
-        checkboxes.forEach(function(checkbox) {
-            checkbox.checked = newState;
-        });
+                // Aplicar el nuevo estado a todos los checkboxes
+                checkboxes.forEach(function(checkbox) {
+                    checkbox.checked = newState;
+                });
+            });
+        }
     });
 </script>
-@endsection
-
+@endpush

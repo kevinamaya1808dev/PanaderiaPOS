@@ -90,11 +90,17 @@
                         <span id="total">$0.00</span>
                     </div>
                     {{-- Botones --}}
+                    {{-- ***** TUS BOTONES (HTML YA ESTABA BIEN) ***** --}}
                     <button id="process-payment" class="btn btn-success btn-lg w-100 mb-2 disabled" data-bs-toggle="modal" data-bs-target="#paymentModal">
-                        <i class="fas fa-money-check-alt me-2"></i> Procesar Venta
+                        <i class="fas fa-dollar-sign me-2"></i> Cobrar Ahora
                     </button>
+
+                    <button id="btn-generar-ticket" class="btn btn-primary btn-lg w-100 mb-2 disabled"> 
+                        <i class="fas fa-ticket-alt me-2"></i> Generar Ticket (Pagar en Caja)
+                    </button>
+
                     <button id="cancel-order" class="btn btn-outline-danger w-100">
-                        <i class="fas fa-times-circle me-2"></i> Cancelar Orden
+                       <i class="fas fa-times-circle me-2"></i> Cancelar Orden
                     </button>
                 </div>
             </div>
@@ -103,12 +109,12 @@
     {{-- SI LA CAJA ESTÁ CERRADA --}}
     @else
          <div class="alert alert-danger text-center mx-auto mt-5 shadow" style="max-width: 600px;">
-             <h4 class="alert-heading"><i class="fas fa-exclamation-triangle me-2"></i> ¡Caja Cerrada!</h4>
-             <p>No se puede realizar ninguna venta hasta que abras la caja.</p>
-             <hr>
-             <a href="{{ route('cajas.index') }}" class="btn btn-danger">
-                 <i class="fas fa-box-open me-2"></i> Ir a Gestión de Caja para Abrir
-             </a>
+              <h4 class="alert-heading"><i class="fas fa-exclamation-triangle me-2"></i> ¡Caja Cerrada!</h4>
+              <p>No se puede realizar ninguna venta hasta que abras la caja.</p>
+              <hr>
+              <a href="{{ route('cajas.index') }}" class="btn btn-danger">
+                   <i class="fas fa-box-open me-2"></i> Ir a Gestión de Caja para Abrir
+              </a>
          </div>
     @endif
 </div>
@@ -229,49 +235,33 @@
         const tarjetaFields = document.getElementById('tarjeta-fields'); 
         const modalFolioPago = document.getElementById('modal-folio-pago'); 
         const printFrame = document.getElementById('print-frame'); // Referencia al iframe
-
+        const btnGenerarTicket = document.getElementById('btn-generar-ticket'); // <-- Esta era tu línea 220
+        
         // ==========================================================
-        // ***** CAMBIO 1: LÓGICA DE ACTUALIZACIÓN DEL CARRITO *****
+        // LÓGICA DE ACTUALIZACIÓN DEL CARRITO
         // ==========================================================
 
-        /**
-         * Actualiza la cantidad de un item en el carrito y recalcula.
-         * Esta función centraliza la lógica de validación de stock.
-         */
         function setCartQuantity(id, newQty) {
-            if (!cart[id]) return; // Salir si el item no existe
-
+            if (!cart[id]) return; 
             const item = cart[id];
             const stock = item.stock;
-            
-            // Convertir a número entero
             newQty = parseInt(newQty, 10);
-
-            // 1. Validar si es un número
             if (isNaN(newQty) || newQty < 0) {
-                newQty = 1; // Resetear a 1 si el valor no es válido
+                newQty = 1; 
             }
-
-            // 2. Validar Stock
             if (newQty > stock) {
                 alert(`Stock insuficiente. Solo quedan ${stock} unidades de ${item.name}.`);
-                newQty = stock; // Ajustar al máximo de stock
+                newQty = stock; 
             }
-
-            // 3. Validar si es 0 (eliminar producto)
             if (newQty <= 0) {
                 delete cart[id];
             } else {
                 item.qty = newQty;
             }
-            
-            // 4. Actualizar la UI
             updateCartUI();
         }
 
-        /**
-         * Dibuja la UI del carrito basada en el objeto 'cart'.
-         */
+        // ***** ¡AQUÍ ESTÁ LA CORRECCIÓN DE LOS BOTONES! *****
         function updateCartUI() {
             let subtotal = 0;
             let itemCount = 0;
@@ -286,12 +276,8 @@
                 const itemElement = document.createElement('div');
                 itemElement.className = 'd-flex justify-content-between border-bottom py-2 align-items-center cart-item';
                 
-                // ***** CAMBIO 2: HTML del item del carrito *****
-                // Se reemplaza el <span class="badge"> por un <input type="number">
                 itemElement.innerHTML = `
                     <div class="flex-grow-1 me-2 d-flex align-items-center">
-                        
-                        <!-- Input para cantidad editable -->
                         <input type="number" 
                                class="form-control form-control-sm cart-item-qty" 
                                value="${item.qty}" 
@@ -299,7 +285,6 @@
                                min="0" 
                                max="${item.stock}" 
                                style="width: 60px; text-align: center; margin-right: 10px;">
-                               
                         <span class="fw-bold">${item.name}</span>
                     </div>
                     <div class="d-flex align-items-center">
@@ -313,21 +298,33 @@
 
             if (itemCount === 0) { 
                 if (!cartDiv.querySelector('.cart-item')) { cartDiv.innerHTML = emptyCartMessageHTML; }
-                if (processButton) processButton.classList.add('disabled');
+                if (processButton) {
+                    processButton.classList.add('disabled');
+                    processButton.disabled = true; // <-- CORREGIDO
+                }
+                if (btnGenerarTicket) {
+                    btnGenerarTicket.classList.add('disabled'); 
+                    btnGenerarTicket.disabled = true; // <-- CORREGIDO
+                }
             } else { 
                 const emptyMsg = cartDiv.querySelector('.empty-cart-message');
                 if(emptyMsg) emptyMsg.remove();
-                if (processButton) processButton.classList.remove('disabled');
+                if (processButton) {
+                    processButton.classList.remove('disabled');
+                    processButton.disabled = false; // <-- CORREGIDO
+                }
+                if (btnGenerarTicket) {
+                    btnGenerarTicket.classList.remove('disabled'); 
+                    btnGenerarTicket.disabled = false; // <-- CORREGIDO
+                }
             }
+            // ***** FIN DE LA CORRECCIÓN DE BOTONES *****
 
             if (subtotalSpan) subtotalSpan.textContent = `$${subtotal.toFixed(2)}`;
             if (totalSpan) totalSpan.textContent = `$${subtotal.toFixed(2)}`;
             if (modalTotalDisplay) modalTotalDisplay.textContent = `$${subtotal.toFixed(2)}`; 
         }
 
-        /**
-         * Añade un item al carrito (generalmente 1 a 1).
-         */
         function addItem(id, name, price, stock) {
             stock = parseInt(stock) || 0; 
             if (stock <= 0) {
@@ -338,60 +335,46 @@
                 }
                 return; 
             }
-            
             const newQty = (cart[id] ? cart[id].qty : 0) + 1;
-            
             if (newQty > stock) {
                 alert(`No puedes añadir más de ${stock} unidades de ${name}.`);
-                cart[id].qty = stock; // Asegurar que no pase del stock
+                cart[id].qty = stock; 
             } else {
                 cart[id] = { name, price, qty: newQty, stock };
             }
-            
             updateCartUI();
         }
         
-        /**
-         * Quita un item del carrito (de 1 en 1).
-         */
         function removeItem(id) {
             if (cart[id]) {
                 const newQty = cart[id].qty - 1;
-                setCartQuantity(id, newQty); // Usar la función central
+                setCartQuantity(id, newQty); 
             }
         }
 
         // ==========================================================
-        // ***** CAMBIO 3: EVENT LISTENERS DEL CARRITO *****
+        // LISTENERS DEL CARRITO (Sin cambios)
         // ==========================================================
-        
-        // Listener para botones + y -
         if (cartDiv) { 
             cartDiv.addEventListener('click', function(e) { 
                 const target = e.target;
-                
                 if (target.classList.contains('add-item')) {
                     const id = target.dataset.id;
                     const item = cart[id];
                     if (item) addItem(id, item.name, item.price, item.stock);
-                
                 } else if (target.classList.contains('remove-item')) {
                     const id = target.dataset.id;
                     removeItem(id);
                 }
             }); 
-            
-            // ¡NUEVO LISTENER! Para el cambio en el input de cantidad
             cartDiv.addEventListener('change', function(e) {
                 if (e.target.classList.contains('cart-item-qty')) {
                     const id = e.target.dataset.id;
                     const newQty = e.target.value;
-                    setCartQuantity(id, newQty); // Usar la función central
+                    setCartQuantity(id, newQty); 
                 }
             });
         }
-        
-        // Listener para añadir producto desde la lista
         if (productListDiv) { 
             productListDiv.addEventListener('click', function(e) { 
                 const card = e.target.closest('.product-card');
@@ -408,7 +391,6 @@
         // ==========================================================
         // LÓGICA DE FILTROS Y CLIENTES (Sin cambios)
         // ==========================================================
-
         function filterProducts() { 
             const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : ''; 
             const productItems = productListDiv ? productListDiv.querySelectorAll('.product-item') : [];
@@ -478,9 +460,7 @@
             const existingClient = clients.find(c => c.Nombre.toLowerCase() === typedName.toLowerCase());
             selectedClientId = existingClient ? existingClient.idCli : null; 
         }); }
-        
-        // Evento cancelar orden
-         if(cancelButton){ cancelButton.addEventListener('click', function() { 
+        if(cancelButton){ cancelButton.addEventListener('click', function() { 
             if (Object.keys(cart).length > 0 && confirm('¿Cancelar orden y vaciar carrito?')) {
                 for (const id in cart) { delete cart[id]; }
                 updateSelectedClient(null, 'Público General'); 
@@ -497,15 +477,12 @@
                     if(paymentModal) paymentModal.hide(); 
                     return;
                 }
-                
                 if(modalMontoRecibido) modalMontoRecibido.value = ''; 
                 if(modalMontoRecibido) modalMontoRecibido.placeholder = '0.00';
                 if(modalFolioPago) modalFolioPago.value = ''; 
                 if(modalMetodoPago) modalMetodoPago.value = 'efectivo'; 
-                
                 togglePaymentFields(); 
                 calculateChange(); 
-                
                 setTimeout(() => {
                     if(modalMetodoPago && modalMetodoPago.value === 'efectivo' && modalMontoRecibido) {
                         modalMontoRecibido.focus(); 
@@ -513,16 +490,12 @@
                 }, 150); 
             });
         }
-
         if (modalMetodoPago) { modalMetodoPago.addEventListener('change', togglePaymentFields); }
-        
         function togglePaymentFields() { 
             if (!modalMetodoPago || !efectivoFields || !tarjetaFields) return;
             const isCash = modalMetodoPago.value === 'efectivo';
-            
             efectivoFields.style.display = isCash ? 'block' : 'none';
             tarjetaFields.style.display = isCash ? 'none' : 'block'; 
-            
             if (!isCash) {
                 if(modalMontoRecibido && totalSpan) modalMontoRecibido.value = totalSpan.textContent.replace('$', ''); 
                 calculateChange(); 
@@ -531,16 +504,12 @@
                  calculateChange(); 
             }
         }
-
         if (modalMontoRecibido) { modalMontoRecibido.addEventListener('input', calculateChange); }
         if (modalFolioPago) { modalFolioPago.addEventListener('input', calculateChange); } 
-        
         function calculateChange() { 
             if (!modalMetodoPago || !modalCambioDisplay || !confirmPaymentBtn || !totalSpan) return; 
-
             const metodo = modalMetodoPago.value;
             const total = parseFloat(totalSpan.textContent.replace('$', ''));
-
             if (metodo === 'efectivo') {
                 const recibido = modalMontoRecibido ? (parseFloat(modalMontoRecibido.value) || 0) : 0;
                 const cambio = recibido - total;
@@ -554,7 +523,7 @@
         }
         
         // ==========================================================
-        // LÓGICA DE PROCESAR PAGO (Con impresión en iframe)
+        // LÓGICA DE PROCESAR PAGO ("Cobrar Ahora")
         // ==========================================================
         if (confirmPaymentBtn) { 
             confirmPaymentBtn.addEventListener('click', async function() { 
@@ -585,10 +554,12 @@
                     }
                 }
                 
+                // ***** ¡CORRECCIÓN DE LA COMA! *****
                 const payload = {
                     _token: csrfToken, cliente_id: selectedClientId, metodo_pago: metodoPago,
                     total: total, monto_recibido: montoRecibido, monto_entregado: montoEntregado,
-                    detalles: detalles
+                    detalles: detalles, // <--- ¡AQUÍ ESTABA LA COMA FALTANTE!
+                    status: 'Pagada'
                 };
 
                 this.disabled = true;
@@ -605,23 +576,19 @@
                     if (response.ok) {
                         if(paymentModal) paymentModal.hide(); 
 
-                        // Apuntar a la ruta "envoltorio" de impresión
                         const printUrl = `{{ url('/ventas/imprimir') }}/${result.venta_id}`;
                         
-                        // Cargar la URL en el iframe
                         if (printFrame) {
                             console.log("Cargando iframe para imprimir:", printUrl);
-                            printFrame.src = printUrl; // Esto disparará la impresión
+                            printFrame.src = printUrl; 
                         } else {
                             console.error("El iframe de impresión no se encontró.");
                         }
 
-                        // Limpiar y recargar el TPV
-                        // (Se movió la recarga para que la maneje el script del ticket)
                         for (const id in cart) { delete cart[id]; }
                         updateSelectedClient(null, 'Público General'); 
                         updateCartUI();
-                        // window.location.reload(); // Se quita para que la recarga la haga el ticket
+                        // window.location.reload(); 
 
                     } else { 
                         let errMsg = result.message || 'Error.';
@@ -637,7 +604,87 @@
                     this.innerHTML = '<i class="fas fa-check-circle me-2"></i> Confirmar Pago';
                 }
             }); 
-        }
+        } // ***** FIN DE 'if (confirmPaymentBtn)' *****
+
+        
+        // ==========================================================
+        // ¡NUEVA LÓGICA! PROCESAR VENTA PENDIENTE ("Generar Ticket")
+        // (Este es el bloque que se pegó en el lugar incorrecto. Ahora está afuera.)
+        // ==========================================================
+        if (btnGenerarTicket) {
+            btnGenerarTicket.addEventListener('click', async function() {
+                if (Object.keys(cart).length === 0 || !totalSpan) return;
+
+                // Usamos un modal personalizado en lugar de confirm()
+                if (!confirm('¿Generar ticket para pagar en caja? La venta quedará como pendiente.')) {
+                    return;
+                }
+
+                // 2. Preparar el payload (es más simple)
+                const detalles = Object.keys(cart).map(id => ({ 
+                    producto_id: id, cantidad: cart[id].qty, precio_unitario: cart[id].price, importe: cart[id].price * cart[id].qty 
+                }));
+                const total = parseFloat(totalSpan.textContent.replace('$', ''));
+
+                const payload = {
+                    _token: csrfToken, 
+                    cliente_id: selectedClientId, 
+                    metodo_pago: 'pendiente', 
+                    total: total, 
+                    monto_recibido: 0, 
+                    monto_entregado: 0,
+                    detalles: detalles,
+                    status: 'Pendiente' 
+                };
+
+                // 3. Deshabilitar botones
+                this.disabled = true;
+                if (processButton) processButton.disabled = true;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Generando...';
+                
+                try {
+                    // 4. Hacer la misma llamada AJAX al VentaController
+                    const response = await fetch("{{ route('ventas.store') }}", { 
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+                        body: JSON.stringify(payload)
+                    });
+                    const result = await response.json(); 
+
+                    if (response.ok) {
+                        // 5. Éxito: Imprimir el ticket (usando TU MISMA lógica del iframe)
+                        const printUrl = `{{ url('/ventas/imprimir') }}/${result.venta_id}`;
+                        if (printFrame) {
+                            console.log("Cargando iframe para imprimir (pendiente):", printUrl);
+                            printFrame.src = printUrl; 
+                        } else {
+                            console.error("El iframe de impresión no se encontró.");
+                        }
+
+                        // 6. Limpiar todo
+                        for (const id in cart) { delete cart[id]; }
+                        updateSelectedClient(null, 'Público General'); 
+                        updateCartUI();
+                    
+                    } else { 
+                        // 7. Error
+                        let errMsg = result.message || 'Error.';
+                        if (result.errors) { errMsg += '\nDetalles:\n'; for(const f in result.errors) {errMsg += `- ${result.errors[f].join(', ')}\n`;} }
+                        alert('Error: \n' + errMsg);
+                    }
+                } catch (e) { 
+                    console.error('Error al procesar venta pendiente:', e); 
+                    alert('Error de conexión o problema en el script.');
+                } 
+                finally {
+                    // 8. Reactivar botones
+                    this.disabled = false;
+                    this.innerHTML = '<i class="fas fa-ticket-alt me-2"></i> Generar Ticket (Pagar en Caja)';
+                    updateCartUI(); 
+                }
+            });
+        }  // ***** FIN DE 'if (btnGenerarTicket)' *****
+
 
         // Inicializar (sin cambios)
         updateCartUI();

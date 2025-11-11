@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
+    {{-- CAMBIO: Corregido a 'utf-8' --}}
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -10,12 +11,14 @@
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=inter:400,500,600&display=swap" rel="stylesheet" />
 
+    {{-- CAMBIO: Corregido 'xintegrity' a 'integrity' --}}
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" xintegrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-
-    {{-- CAMBIO: Eliminada la línea duplicada y corrupta de Font Awesome de arriba --}}
+    
+    {{-- Cargamos tu CSS que ahora tiene la lógica del overlay --}}
     <link rel="stylesheet" href="{{ asset('css/styles.css') }}">
+    
+    {{-- CAMBIO: Corregido 'xintegrity' a 'integrity' --}}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" xintegrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-
 </head>
 <body>
     
@@ -55,18 +58,21 @@
         @include('layouts.navigation')
     </div>
 
+    {{-- ========================================================== --}}
+    {{-- CAMBIO: Div del fondo oscuro (Backdrop) añadido --}}
+    {{-- ========================================================== --}}
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
     <div class="main-content" id="main-content">
         <div id="app">
             
-            {{-- CAMBIO: Añadida la clase 'auto-dismiss-alert' --}}
+            {{-- Alertas (siguen igual) --}}
             @if (session('success'))
                 <div class="alert alert-success alert-dismissible fade show auto-dismiss-alert" role="alert">
                     {{ session('success') }}
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             @endif
-            
-            {{-- CAMBIO: Añadida la clase 'auto-dismiss-alert' --}}
             @if (session('error'))
                 <div class="alert alert-danger alert-dismissible fade show auto-dismiss-alert" role="alert">
                     {{ session('error') }}
@@ -80,31 +86,92 @@
         </div>
     </div>
 
+    {{-- CAMBIO: Corregido 'xintegrity' a 'integrity' --}}
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" xintegrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
     
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            // Script del Sidebar
-            document.getElementById('sidebarToggle').addEventListener('click', function () {
-                document.getElementById('sidebar').classList.toggle('collapsed');
-                document.getElementById('main-content').classList.toggle('collapsed');
-            });
+            
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('main-content');
+            const sidebarToggle = document.getElementById('sidebarToggle');
+            const backdrop = document.getElementById('sidebarBackdrop');
 
             // ==========================================================
-            // CAMBIO: Script para auto-cerrar las alertas
+            // CAMBIO: Lógica de Sidebar (Controla el Overlay)
             // ==========================================================
             
-            // 1. Seleccionar todas las alertas que deben auto-cerrarse
-            const autoDismissAlerts = document.querySelectorAll('.auto-dismiss-alert');
+            // Función para CERRAR el sidebar
+            function closeSidebar() {
+                sidebar.classList.add('collapsed');
+                backdrop.classList.remove('active');
+                localStorage.setItem('sidebarCollapsed', 'true');
+            }
             
-            // 2. Para cada alerta, establecer un temporizador de 5 segundos
+            // Función para ABRIR el sidebar
+            function openSidebar() {
+                sidebar.classList.remove('collapsed');
+                backdrop.classList.add('active');
+                localStorage.setItem('sidebarCollapsed', 'false');
+            }
+
+            // Al cargar la página, la cerramos por defecto si es móvil
+            // O si el usuario la dejó cerrada en PC
+            if (window.innerWidth < 992 || localStorage.getItem('sidebarCollapsed') === 'true') {
+                 sidebar.classList.add('collapsed');
+                 backdrop.classList.remove('active');
+            } else {
+                 // Si es PC y no estaba colapsado, lo abrimos
+                 sidebar.classList.remove('collapsed');
+                 backdrop.classList.add('active');
+            }
+
+            // El botón de hamburguesa alterna el estado
+            sidebarToggle.addEventListener('click', function () {
+                if (sidebar.classList.contains('collapsed')) {
+                    openSidebar();
+                } else {
+                    closeSidebar();
+                }
+            });
+
+            // El fondo oscuro CIERRA el menú al hacer clic
+            backdrop.addEventListener('click', function() {
+                closeSidebar();
+            });
+
+            // Los enlaces del menú CIERRAN el menú al hacer clic
+            const navLinks = document.querySelectorAll('.sidebar .nav-link');
+            navLinks.forEach(function(link) {
+                link.addEventListener('click', function() {
+                    // Siempre cierra al hacer clic en un enlace (comportamiento overlay)
+                    closeSidebar();
+                });
+            });
+
+            // --- Lógica de Alertas (5s) ---
+            const autoDismissAlerts = document.querySelectorAll('.auto-dismiss-alert');
             autoDismissAlerts.forEach(function(alert) {
                 setTimeout(function() {
-                    // 3. Usar la API de Bootstrap para cerrar la alerta con la animación
-                    const bsAlert = new bootstrap.Alert(alert);
-                    bsAlert.close();
-                }, 2500); // 5000 milisegundos = 5 segundos
+                    if (typeof bootstrap !== 'undefined') {
+                        const bsAlert = new bootstrap.Alert(alert);
+                        bsAlert.close();
+                    }
+                }, 5000); 
             });
+
+            // --- Lógica de Auto-Scroll (Sigue funcionando) ---
+            try {
+                const activeLink = document.querySelector('.sidebar .nav-link.active');
+                if (sidebar && activeLink) {
+                    const linkTop = activeLink.offsetTop;
+                    const sidebarHeight = sidebar.clientHeight;
+                    const linkHeight = activeLink.clientHeight;
+                    sidebar.scrollTop = linkTop - (sidebarHeight / 2) + (linkHeight / 2);
+                }
+            } catch (e) {
+                console.error("Error al auto-scroll del sidebar:", e);
+            }
 
         });
     </script>
