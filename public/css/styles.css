@@ -139,3 +139,29 @@ body {
 .top-header .btn-dark:hover {
     background-color: rgba(0, 0, 0, 0.1);
 }
+/* --- Corregir menú desplegable en móviles --- */
+.navbar .dropdown-menu {
+    position: absolute !important;
+    top: 100% !important;
+    right: 0 !important;
+    left: auto !important;
+    transform: none !important;
+    margin-top: 0.3rem !important;
+    z-index: 1050 !important;
+}
+
+/* Evita que el dropdown se “empuje” o desplace el contenido */
+.navbar-nav {
+    flex-direction: row !important;
+}
+
+@media (max-width: 991.98px) {
+    .navbar .dropdown-menu {
+        position: fixed !important;
+        top: 56px !important; /* igual a la altura del header */
+        right: 10px !important;
+        left: auto !important;
+        border-radius: 0.5rem;
+        width: auto;
+    }
+}

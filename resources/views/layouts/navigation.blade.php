@@ -154,4 +154,14 @@
         </li>
     @endif
 
+    @if (Auth::user()->hasPermissionTo('cajas', 'mostrar'))
+    <li class="nav-item">
+        {{-- Lógica 'active' para todas las rutas que empiecen con 'cobrar.' --}}
+        <a class="nav-link {{ request()->routeIs('cobrar.*') ? 'active' : '' }}" href="{{ route('cobrar.index') }}">
+            {{-- Usamos el mismo ícono que en el dashboard para consistencia --}}
+            <i class="fas fa-file-invoice-dollar me-2"></i> Cobrar Pendientes
+        </a>
+    </li>
+@endif
+
 </ul>

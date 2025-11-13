@@ -20,7 +20,7 @@
                 </div>
                 
                 {{-- Contenedor de productos --}}
-                <div class="row g-3 overflow-auto p-2 border rounded shadow-sm bg-white" id="product-list" style="max-height: calc(100vh - 220px);"> {{-- Ajuste de altura --}}
+                <div class="row g-3 overflow-auto p-2 border rounded shadow-sm bg-white" id="product-list" style="max-height: calc(100vh - 220px);">
                     @forelse ($productos as $producto)
                         <div class="col-4 col-sm-3 col-md-2 product-item" data-category-id="{{ $producto->categoria_id }}">
                             
@@ -90,7 +90,6 @@
                         <span id="total">$0.00</span>
                     </div>
                     {{-- Botones --}}
-                    {{-- ***** TUS BOTONES (HTML YA ESTABA BIEN) ***** --}}
                     <button id="process-payment" class="btn btn-success btn-lg w-100 mb-2 disabled" data-bs-toggle="modal" data-bs-target="#paymentModal">
                         <i class="fas fa-dollar-sign me-2"></i> Cobrar Ahora
                     </button>
@@ -109,13 +108,13 @@
     {{-- SI LA CAJA ESTÁ CERRADA --}}
     @else
          <div class="alert alert-danger text-center mx-auto mt-5 shadow" style="max-width: 600px;">
-              <h4 class="alert-heading"><i class="fas fa-exclamation-triangle me-2"></i> ¡Caja Cerrada!</h4>
-              <p>No se puede realizar ninguna venta hasta que abras la caja.</p>
-              <hr>
-              <a href="{{ route('cajas.index') }}" class="btn btn-danger">
-                   <i class="fas fa-box-open me-2"></i> Ir a Gestión de Caja para Abrir
-              </a>
-         </div>
+             <h4 class="alert-heading"><i class="fas fa-exclamation-triangle me-2"></i> ¡Caja Cerrada!</h4>
+             <p>No se puede realizar ninguna venta hasta que abras la caja.</p>
+             <hr>
+             <a href="{{ route('cajas.index') }}" class="btn btn-danger">
+                  <i class="fas fa-box-open me-2"></i> Ir a Gestión de Caja para Abrir
+             </a>
+        </div>
     @endif
 </div>
 
@@ -192,15 +191,57 @@
 {{-- ***** FIN MODAL DE PAGO ***** --}}
 
 
+{{-- MODAL DE CONFIRMACIÓN (El que ya tenías) --}}
+<div class="modal fade" id="confirmationModal" tabindex="-1" aria-labelledby="confirmationModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" id="confirmationModalHeader">
+                <h5 class="modal-title" id="confirmationModalTitle">Confirmación</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="confirmationModalBody">
+                ¿Estás seguro?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i> Cerrar
+                </button>
+                <button type="button" class="btn btn-primary" id="confirmationModalConfirmButton">
+                    Confirmar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- ========================================================== --}}
+{{-- CAMBIO 1: AÑADIDO EL HTML DEL MODAL DE ALERTA --}}
+{{-- ========================================================== --}}
+<div class="modal fade" id="alertModal" tabindex="-1" aria-labelledby="alertModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" id="alertModalHeader">
+                <h5 class="modal-title" id="alertModalTitle">Alerta</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="alertModalBody">
+                ...
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 {{-- ***** IFRAME OCULTO PARA IMPRESIÓN ***** --}}
-{{-- Este iframe se usa para cargar el ticket HTML y llamar a print() desde él --}}
 <iframe id="print-frame" name="printFrame" 
     style="position: absolute; top: -9999px; left: -9999px; width: 1px; height: 1px; visibility: hidden; border: 0;">
 </iframe>
 
 
 <script>
-    // Asegurarse de que TODO el código JS esté dentro de este listener
     document.addEventListener('DOMContentLoaded', function() {
         // Variables de Estado
         const cart = {}; 
@@ -234,13 +275,88 @@
         const efectivoFields = document.getElementById('efectivo-fields'); 
         const tarjetaFields = document.getElementById('tarjeta-fields'); 
         const modalFolioPago = document.getElementById('modal-folio-pago'); 
-        const printFrame = document.getElementById('print-frame'); // Referencia al iframe
-        const btnGenerarTicket = document.getElementById('btn-generar-ticket'); // <-- Esta era tu línea 220
+        const printFrame = document.getElementById('print-frame');
+        const btnGenerarTicket = document.getElementById('btn-generar-ticket'); 
         
+        // ==========================================================
+        // CAMBIO 2: NUEVAS REFERENCIAS Y FUNCIONES PARA LOS MODALS
+        // ==========================================================
+        const confirmationModalElement = document.getElementById('confirmationModal');
+        let confirmationModal = null;
+        if (confirmationModalElement && typeof bootstrap !== 'undefined') {
+            confirmationModal = new bootstrap.Modal(confirmationModalElement);
+        }
+        const confirmationModalTitle = document.getElementById('confirmationModalTitle');
+        const confirmationModalBody = document.getElementById('confirmationModalBody');
+        const confirmationModalConfirmButton = document.getElementById('confirmationModalConfirmButton');
+        const confirmationModalHeader = document.getElementById('confirmationModalHeader');
+
+        const alertModalElement = document.getElementById('alertModal');
+        let alertModal = null;
+        if (alertModalElement && typeof bootstrap !== 'undefined') {
+            alertModal = new bootstrap.Modal(alertModalElement);
+        }
+        const alertModalTitle = document.getElementById('alertModalTitle');
+        const alertModalBody = document.getElementById('alertModalBody');
+        const alertModalHeader = document.getElementById('alertModalHeader');
+
+        /**
+         * Muestra un modal de ALERTA (reemplaza alert())
+         * @param {string} body - El mensaje de alerta.
+         * @param {string} title - El título (ej. 'Stock Insuficiente').
+         * @param {string} type - 'danger' (rojo) o 'warning' (amarillo).
+         */
+        function showAlertModal(body, title = 'Atención', type = 'danger') {
+            if (!alertModal) {
+                alert(body); // Fallback si el modal no cargó
+                return;
+            }
+            alertModalTitle.textContent = title;
+            alertModalBody.textContent = body;
+            
+            alertModalHeader.className = 'modal-header text-white'; // Resetea clases
+            alertModalHeader.classList.add(type === 'danger' ? 'bg-danger' : 'bg-warning');
+            
+            alertModal.show();
+        }
+
+        /**
+         * Muestra un modal de CONFIRMACIÓN (reemplaza confirm())
+         */
+        function showConfirmationModal(title, body, confirmText, confirmClass, callback) {
+            if (!confirmationModal) return;
+
+            confirmationModalTitle.textContent = title;
+            confirmationModalBody.textContent = body;
+            confirmationModalConfirmButton.textContent = confirmText;
+
+            confirmationModalConfirmButton.className = 'btn'; 
+            confirmationModalHeader.className = 'modal-header text-white';
+            confirmationModalConfirmButton.classList.add(confirmClass);
+            
+            let headerClass = confirmClass.replace('btn-', 'bg-');
+            if(headerClass.includes('outline')){
+                headerClass = 'bg-secondary';
+            }
+            confirmationModalHeader.classList.add(headerClass);
+
+            // Re-crear el botón para evitar listeners duplicados
+            const newConfirmButton = confirmationModalConfirmButton.cloneNode(true);
+            confirmationModalConfirmButton.parentNode.replaceChild(newConfirmButton, confirmationModalConfirmButton);
+            
+            const newButtonReference = document.getElementById('confirmationModalConfirmButton');
+            
+            newButtonReference.addEventListener('click', function() {
+                callback(); 
+                confirmationModal.hide(); 
+            });
+
+            confirmationModal.show();
+        }
+
         // ==========================================================
         // LÓGICA DE ACTUALIZACIÓN DEL CARRITO
         // ==========================================================
-
         function setCartQuantity(id, newQty) {
             if (!cart[id]) return; 
             const item = cart[id];
@@ -250,7 +366,8 @@
                 newQty = 1; 
             }
             if (newQty > stock) {
-                alert(`Stock insuficiente. Solo quedan ${stock} unidades de ${item.name}.`);
+                // CAMBIO 3: Reemplazado alert()
+                showAlertModal(`Stock insuficiente. Solo quedan ${stock} unidades de ${item.name}.`, 'Stock Insuficiente', 'warning');
                 newQty = stock; 
             }
             if (newQty <= 0) {
@@ -260,14 +377,13 @@
             }
             updateCartUI();
         }
-
-        // ***** ¡AQUÍ ESTÁ LA CORRECCIÓN DE LOS BOTONES! *****
+        
         function updateCartUI() {
+            // ... (Lógica de UI sin cambios) ...
             let subtotal = 0;
             let itemCount = 0;
             if (!cartDiv) { console.error("Elemento cartDiv no encontrado."); return; } 
             cartDiv.innerHTML = ''; 
-            
             for (const id in cart) { 
                 const item = cart[id];
                 const itemTotal = item.price * item.qty;
@@ -275,16 +391,9 @@
                 itemCount++;
                 const itemElement = document.createElement('div');
                 itemElement.className = 'd-flex justify-content-between border-bottom py-2 align-items-center cart-item';
-                
                 itemElement.innerHTML = `
                     <div class="flex-grow-1 me-2 d-flex align-items-center">
-                        <input type="number" 
-                               class="form-control form-control-sm cart-item-qty" 
-                               value="${item.qty}" 
-                               data-id="${id}" 
-                               min="0" 
-                               max="${item.stock}" 
-                               style="width: 60px; text-align: center; margin-right: 10px;">
+                        <input type="number" class="form-control form-control-sm cart-item-qty" value="${item.qty}" data-id="${id}" min="0" max="${item.stock}" style="width: 60px; text-align: center; margin-right: 10px;">
                         <span class="fw-bold">${item.name}</span>
                     </div>
                     <div class="d-flex align-items-center">
@@ -295,31 +404,16 @@
                 `;
                 cartDiv.appendChild(itemElement);
             }
-
             if (itemCount === 0) { 
                 if (!cartDiv.querySelector('.cart-item')) { cartDiv.innerHTML = emptyCartMessageHTML; }
-                if (processButton) {
-                    processButton.classList.add('disabled');
-                    processButton.disabled = true; // <-- CORREGIDO
-                }
-                if (btnGenerarTicket) {
-                    btnGenerarTicket.classList.add('disabled'); 
-                    btnGenerarTicket.disabled = true; // <-- CORREGIDO
-                }
+                if (processButton) { processButton.classList.add('disabled'); processButton.disabled = true; }
+                if (btnGenerarTicket) { btnGenerarTicket.classList.add('disabled'); btnGenerarTicket.disabled = true; }
             } else { 
                 const emptyMsg = cartDiv.querySelector('.empty-cart-message');
                 if(emptyMsg) emptyMsg.remove();
-                if (processButton) {
-                    processButton.classList.remove('disabled');
-                    processButton.disabled = false; // <-- CORREGIDO
-                }
-                if (btnGenerarTicket) {
-                    btnGenerarTicket.classList.remove('disabled'); 
-                    btnGenerarTicket.disabled = false; // <-- CORREGIDO
-                }
+                if (processButton) { processButton.classList.remove('disabled'); processButton.disabled = false; }
+                if (btnGenerarTicket) { btnGenerarTicket.classList.remove('disabled'); btnGenerarTicket.disabled = false; }
             }
-            // ***** FIN DE LA CORRECCIÓN DE BOTONES *****
-
             if (subtotalSpan) subtotalSpan.textContent = `$${subtotal.toFixed(2)}`;
             if (totalSpan) totalSpan.textContent = `$${subtotal.toFixed(2)}`;
             if (modalTotalDisplay) modalTotalDisplay.textContent = `$${subtotal.toFixed(2)}`; 
@@ -337,7 +431,8 @@
             }
             const newQty = (cart[id] ? cart[id].qty : 0) + 1;
             if (newQty > stock) {
-                alert(`No puedes añadir más de ${stock} unidades de ${name}.`);
+                // CAMBIO 4: Reemplazado alert()
+                showAlertModal(`No puedes añadir más de ${stock} unidades de ${name}. Revisa tu stock.`, 'Stock Insuficiente', 'warning');
                 cart[id].qty = stock; 
             } else {
                 cart[id] = { name, price, qty: newQty, stock };
@@ -413,6 +508,8 @@
             });
         });
         if (searchInput) { searchInput.addEventListener('input', filterProducts); }
+        populateClientDropdown(); // <-- Llamada movida al final
+        updateSelectedClient(null, 'Público General'); // <-- Llamada movida al final
         function populateClientDropdown() { 
             if (!clientDropdownMenu) return; 
             const items = clientDropdownMenu.querySelectorAll('li:not(:first-child):not(:nth-child(2))');
@@ -460,16 +557,30 @@
             const existingClient = clients.find(c => c.Nombre.toLowerCase() === typedName.toLowerCase());
             selectedClientId = existingClient ? existingClient.idCli : null; 
         }); }
-        if(cancelButton){ cancelButton.addEventListener('click', function() { 
-            if (Object.keys(cart).length > 0 && confirm('¿Cancelar orden y vaciar carrito?')) {
-                for (const id in cart) { delete cart[id]; }
-                updateSelectedClient(null, 'Público General'); 
-                updateCartUI();
-            }
-        }); }
+        
+        // ==========================================================
+        // CAMBIO 5: Reemplazado confirm() en 'cancel-order'
+        // ==========================================================
+        if(cancelButton){ 
+            cancelButton.addEventListener('click', function() { 
+                if (Object.keys(cart).length > 0) {
+                    showConfirmationModal(
+                        'Cancelar Orden',
+                        '¿Estás seguro de que quieres cancelar esta orden y vaciar el carrito?',
+                        'Sí, Cancelar',
+                        'btn-danger',
+                        function() { // Callback con la lógica original
+                            for (const id in cart) { delete cart[id]; }
+                            updateSelectedClient(null, 'Público General'); 
+                            updateCartUI();
+                        }
+                    );
+                }
+            }); 
+        }
 
         // ==========================================================
-        // LÓGICA DEL MODAL DE PAGO (Sin cambios)
+        // LÓGICA DEL MODAL DE PAGO
         // ==========================================================
         if (paymentModalElement) {
             paymentModalElement.addEventListener('show.bs.modal', function() {
@@ -541,24 +652,25 @@
                 if (metodoPago === 'efectivo') {
                     montoEntregado = Math.max(0, montoRecibido - total); 
                     if (montoRecibido < total) {
-                        alert('Monto recibido insuficiente.');
+                        // CAMBIO 6: Reemplazado alert()
+                        showAlertModal('Monto recibido insuficiente.', 'Error de Pago');
                         if(modalMontoRecibido) modalMontoRecibido.focus();
                         return; 
                     }
                 } else if (metodoPago === 'tarjeta') {
                     montoRecibido = total; 
                     if (!folioTarjeta) { 
-                        alert('Por favor, ingrese el folio o número de autorización.');
+                        // CAMBIO 7: Reemplazado alert()
+                        showAlertModal('Por favor, ingrese el folio o número de autorización.', 'Error de Pago');
                         if(modalFolioPago) modalFolioPago.focus();
                         return;
                     }
                 }
                 
-                // ***** ¡CORRECCIÓN DE LA COMA! *****
                 const payload = {
                     _token: csrfToken, cliente_id: selectedClientId, metodo_pago: metodoPago,
                     total: total, monto_recibido: montoRecibido, monto_entregado: montoEntregado,
-                    detalles: detalles, // <--- ¡AQUÍ ESTABA LA COMA FALTANTE!
+                    detalles: detalles,
                     status: 'Pagada'
                 };
 
@@ -575,118 +687,110 @@
 
                     if (response.ok) {
                         if(paymentModal) paymentModal.hide(); 
-
                         const printUrl = `{{ url('/ventas/imprimir') }}/${result.venta_id}`;
-                        
                         if (printFrame) {
-                            console.log("Cargando iframe para imprimir:", printUrl);
                             printFrame.src = printUrl; 
                         } else {
                             console.error("El iframe de impresión no se encontró.");
                         }
-
                         for (const id in cart) { delete cart[id]; }
                         updateSelectedClient(null, 'Público General'); 
                         updateCartUI();
-                        // window.location.reload(); 
-
                     } else { 
                         let errMsg = result.message || 'Error.';
                         if (result.errors) { errMsg += '\nDetalles:\n'; for(const f in result.errors) {errMsg += `- ${result.errors[f].join(', ')}\n`;} }
-                        alert('Error: \n' + errMsg);
+                        // CAMBIO 8: Reemplazado alert()
+                        showAlertModal(errMsg, 'Error al Guardar Venta');
                     }
                 } catch (e) { 
                     console.error('Error al procesar venta:', e); 
-                    alert('Error de conexión o problema en el script.');
+                    // CAMBIO 9: Reemplazado alert()
+                    showAlertModal('Error de conexión o problema en el script. Revise la consola.', 'Error de Red');
                 } 
                 finally {
                     this.disabled = false;
                     this.innerHTML = '<i class="fas fa-check-circle me-2"></i> Confirmar Pago';
                 }
             }); 
-        } // ***** FIN DE 'if (confirmPaymentBtn)' *****
+        } 
 
         
         // ==========================================================
-        // ¡NUEVA LÓGICA! PROCESAR VENTA PENDIENTE ("Generar Ticket")
-        // (Este es el bloque que se pegó en el lugar incorrecto. Ahora está afuera.)
+        // LÓGICA PROCESAR TICKET PENDIENTE
         // ==========================================================
         if (btnGenerarTicket) {
-            btnGenerarTicket.addEventListener('click', async function() {
+            btnGenerarTicket.addEventListener('click', function() {
                 if (Object.keys(cart).length === 0 || !totalSpan) return;
 
-                // Usamos un modal personalizado en lugar de confirm()
-                if (!confirm('¿Generar ticket para pagar en caja? La venta quedará como pendiente.')) {
-                    return;
-                }
+                // CAMBIO 10: Reemplazado confirm()
+                showConfirmationModal(
+                    'Generar Ticket',
+                    '¿Generar ticket para pagar en caja? La venta quedará como pendiente.',
+                    'Sí, Generar Ticket',
+                    'btn-primary',
+                    async function() { // Inicio del callback async
+                        
+                        const detalles = Object.keys(cart).map(id => ({ 
+                            producto_id: id, cantidad: cart[id].qty, precio_unitario: cart[id].price, importe: cart[id].price * cart[id].qty 
+                        }));
+                        const total = parseFloat(totalSpan.textContent.replace('$', ''));
+                        const payload = {
+                            _token: csrfToken, 
+                            cliente_id: selectedClientId, 
+                            metodo_pago: 'pendiente', 
+                            total: total, 
+                            monto_recibido: 0, 
+                            monto_entregado: 0,
+                            detalles: detalles,
+                            status: 'Pendiente' 
+                        };
 
-                // 2. Preparar el payload (es más simple)
-                const detalles = Object.keys(cart).map(id => ({ 
-                    producto_id: id, cantidad: cart[id].qty, precio_unitario: cart[id].price, importe: cart[id].price * cart[id].qty 
-                }));
-                const total = parseFloat(totalSpan.textContent.replace('$', ''));
+                        btnGenerarTicket.disabled = true;
+                        if (processButton) processButton.disabled = true;
+                        btnGenerarTicket.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Generando...';
+                        
+                        try {
+                            const response = await fetch("{{ route('ventas.store') }}", { 
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+                                body: JSON.stringify(payload)
+                            });
+                            const result = await response.json(); 
 
-                const payload = {
-                    _token: csrfToken, 
-                    cliente_id: selectedClientId, 
-                    metodo_pago: 'pendiente', 
-                    total: total, 
-                    monto_recibido: 0, 
-                    monto_entregado: 0,
-                    detalles: detalles,
-                    status: 'Pendiente' 
-                };
-
-                // 3. Deshabilitar botones
-                this.disabled = true;
-                if (processButton) processButton.disabled = true;
-                this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Generando...';
-                
-                try {
-                    // 4. Hacer la misma llamada AJAX al VentaController
-                    const response = await fetch("{{ route('ventas.store') }}", { 
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken },
-                        body: JSON.stringify(payload)
-                    });
-                    const result = await response.json(); 
-
-                    if (response.ok) {
-                        // 5. Éxito: Imprimir el ticket (usando TU MISMA lógica del iframe)
-                        const printUrl = `{{ url('/ventas/imprimir') }}/${result.venta_id}`;
-                        if (printFrame) {
-                            console.log("Cargando iframe para imprimir (pendiente):", printUrl);
-                            printFrame.src = printUrl; 
-                        } else {
-                            console.error("El iframe de impresión no se encontró.");
+                            if (response.ok) {
+                                const printUrl = `{{ url('/ventas/imprimir') }}/${result.venta_id}`;
+                                if (printFrame) {
+                                    printFrame.src = printUrl; 
+                                } else {
+                                    console.error("El iframe de impresión no se encontró.");
+                                }
+                                for (const id in cart) { delete cart[id]; }
+                                updateSelectedClient(null, 'Público General'); 
+                                updateCartUI();
+                            
+                            } else { 
+                                let errMsg = result.message || 'Error.';
+                                if (result.errors) { errMsg += '\nDetalles:\n'; for(const f in result.errors) {errMsg += `- ${result.errors[f].join(', ')}\n`;} }
+                                // CAMBIO 11: Reemplazado alert()
+                                showAlertModal(errMsg, 'Error al Generar Ticket');
+                            }
+                        } catch (e) { 
+                            console.error('Error al procesar venta pendiente:', e); 
+                            // CAMBIO 12: Reemplazado alert()
+                            showAlertModal('Error de conexión o problema en el script. Revise la consola.', 'Error de Red');
+                        } 
+                        finally {
+                            btnGenerarTicket.disabled = false;
+                            btnGenerarTicket.innerHTML = '<i class="fas fa-ticket-alt me-2"></i> Generar Ticket (Pagar en Caja)';
+                            updateCartUI(); 
                         }
-
-                        // 6. Limpiar todo
-                        for (const id in cart) { delete cart[id]; }
-                        updateSelectedClient(null, 'Público General'); 
-                        updateCartUI();
-                    
-                    } else { 
-                        // 7. Error
-                        let errMsg = result.message || 'Error.';
-                        if (result.errors) { errMsg += '\nDetalles:\n'; for(const f in result.errors) {errMsg += `- ${result.errors[f].join(', ')}\n`;} }
-                        alert('Error: \n' + errMsg);
-                    }
-                } catch (e) { 
-                    console.error('Error al procesar venta pendiente:', e); 
-                    alert('Error de conexión o problema en el script.');
-                } 
-                finally {
-                    // 8. Reactivar botones
-                    this.disabled = false;
-                    this.innerHTML = '<i class="fas fa-ticket-alt me-2"></i> Generar Ticket (Pagar en Caja)';
-                    updateCartUI(); 
-                }
+                    } // Fin del callback async
+                ); // Fin de showConfirmationModal
             });
-        }  // ***** FIN DE 'if (btnGenerarTicket)' *****
+        } 
 
 
-        // Inicializar (sin cambios)
+        // Inicializar
         updateCartUI();
         populateClientDropdown();
         updateSelectedClient(null, 'Público General');

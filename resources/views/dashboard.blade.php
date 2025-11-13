@@ -114,6 +114,18 @@
                 </div>
             </div>
         @endif
+        {{-- Módulo 7: Cobrar Ventas Pendientes --}}
+@if (Auth::user()->hasPermissionTo('cajas', 'mostrar'))
+    <div class="col">
+        <div class="card h-100 shadow-sm border-0">
+            <div class="card-body">
+                <h5 class="card-title text-warning"><i class="fas fa-file-invoice-dollar me-2"></i> Cobrar Pendientes</h5>
+                <p class="card-text">Busca un ticket pendiente por su folio y registra el pago final en caja.</p>
+                <a href="{{ route('cobrar.index') }}" class="btn btn-sm btn-outline-warning">Ir a Cobrar →</a>
+            </div>
+        </div>
+    </div>
+@endif
     </div>
 </div>
 @endsection

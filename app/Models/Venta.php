@@ -20,6 +20,7 @@ class Venta extends Model
         'total',            // Monto total de la venta
         'monto_recibido',   // Monto que dio el cliente
         'monto_entregado',  // Cambio que se le dio al cliente
+        'status'
     ];
 
     /**

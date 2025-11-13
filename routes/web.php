@@ -15,6 +15,7 @@ use App\Http\Controllers\CajaController;
 use App\Http\Controllers\ProveedorController;
 use App\Http\Controllers\CompraController;
 use App\Http\Controllers\VentaController;
+use App\Http\Controllers\CobrarVentaController;
 
 /*
 |--------------------------------------------------------------------------
@@ -219,4 +220,20 @@ Route::delete('categorias/{categoria}', [CategoriaController::class, 'destroy'])
      ->name('cajas.exportar.pdf')
      ->middleware('auth');
     
+
+   // --- Grupo de Rutas para Cobrar Ventas Pendientes ---
+Route::middleware(['auth', 'permiso:cajas,mostrar'])->group(function () {
+    
+    // La página principal para buscar
+    Route::get('/cobrar-pendientes', [CobrarVentaController::class, 'index'])->name('cobrar.index');
+    
+    // La ruta para buscar el folio (la llamaremos con JS)
+    Route::get('/cobrar-pendientes/buscar', [CobrarVentaController::class, 'buscar'])->name('cobrar.buscar');
+    
+    // La ruta para procesar el pago (la llamaremos con JS)
+    Route::post('/cobrar-pendientes/pagar', [CobrarVentaController::class, 'pagar'])->name('cobrar.pagar');
+
+    Route::get('/cobrar-pendientes/lista', [CobrarVentaController::class, 'getVentasPendientes'])->name('cobrar.listaPendientes');
+});
+
 });
