@@ -4,7 +4,6 @@
 </div>
 
 <ul class="nav flex-column">
-    <!-- DASHBOARD -->
     <li class="nav-item">
         {{-- CAMBIO: Lógica 'active' corregida --}}
         <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">
@@ -12,8 +11,7 @@
         </a>
     </li>
     
-    <!-- SECCIÓN ADMINISTRACIÓN -->
-    @if (Auth::user()->hasPermissionTo('cargos', 'mostrar') || Auth::user()->hasPermissionTo('usuarios', 'mostrar'))
+    @if (Auth::user()->hasPermissionTo('cargos', 'mostrar') || Auth::user()->hasPermissionTo('usuarios', 'mostrar') || Auth::user()->hasPermissionTo('clientes', 'mostrar'))
         {{-- CAMBIO: Línea divisoria añadida --}}
         <hr class="my-2 mx-3" style="border-top: 5px solid var(--color-header); opacity: 0.25;">
         <li class="nav-item"> {{-- Quitado mt-3 --}}
@@ -40,8 +38,19 @@
             </a>
         </li>
     @endif
+
+    {{-- CLIENTES/EXPENDIOS (Módulo: clientes) --}}
+    {{-- CAMBIO: Módulo movido a la sección ADMINISTRACIÓN --}}
+    @if (Auth::user()->hasPermissionTo('clientes', 'mostrar'))
+        <li class="nav-item">
+            {{-- CAMBIO: Lógica 'active' corregida para incluir sub-rutas (*)--}}
+            <a class="nav-link {{ request()->routeIs('clientes.*') ? 'active' : '' }}" href="{{ route('clientes.index') }}">
+                <i class="fas fa-address-book me-2"></i> Expendios
+            </a>
+        </li>
+    @endif
+
     
-    <!-- SECCIÓN CATÁLOGO -->
     @if (Auth::user()->hasPermissionTo('categorias', 'mostrar') || Auth::user()->hasPermissionTo('productos', 'mostrar') || Auth::user()->hasPermissionTo('inventario', 'mostrar'))
         
         {{-- CAMBIO: Línea divisoria añadida --}}
@@ -82,24 +91,14 @@
         </li>
     @endif
 
-    <!-- SECCIÓN CRM & COMPRAS -->
-    @if (Auth::user()->hasPermissionTo('clientes', 'mostrar') || Auth::user()->hasPermissionTo('proveedores', 'mostrar') || Auth::user()->hasPermissionTo('compras', 'mostrar'))
+    {{-- CAMBIO: Renombrado de SECCIÓN CRM & COMPRAS a GASTOS Y PAGOS --}}
+    @if (Auth::user()->hasPermissionTo('proveedores', 'mostrar') || Auth::user()->hasPermissionTo('compras', 'mostrar'))
         
         {{-- CAMBIO: Línea divisoria añadida --}}
         <hr class="my-2 mx-3" style="border-top: 5px solid var(--color-header); opacity: 0.25;">
 
         <li class="nav-item"> {{-- Quitado mt-3 --}}
-            <div class="sidebar-heading fw-bold ms-3">COMPRAS</div>
-        </li>
-    @endif
-
-    {{-- CLIENTES (Módulo: clientes) --}}
-    @if (Auth::user()->hasPermissionTo('clientes', 'mostrar'))
-        <li class="nav-item">
-            {{-- CAMBIO: Lógica 'active' corregida para incluir sub-rutas (*)--}}
-            <a class="nav-link {{ request()->routeIs('clientes.*') ? 'active' : '' }}" href="{{ route('clientes.index') }}">
-                <i class="fas fa-address-book me-2"></i> Clientes
-            </a>
+            <div class="sidebar-heading fw-bold ms-3">GASTOS Y PAGOS</div>
         </li>
     @endif
 
@@ -123,14 +122,14 @@
         </li>
     @endif
 
-    <!-- SECCIÓN POS & CAJA -->
+    {{-- CAMBIO: Renombrado de POS & CAJA a OPERACIONES DE CAJA --}}
     @if (Auth::user()->hasPermissionTo('ventas', 'mostrar') || Auth::user()->hasPermissionTo('cajas', 'mostrar'))
         
         {{-- CAMBIO: Línea divisoria añadida --}}
         <hr class="my-2 mx-3" style="border-top: 5px solid var(--color-header); opacity: 0.25;">
         
         <li class="nav-item"> {{-- Quitado mt-3 --}}
-            <div class="sidebar-heading fw-bold ms-3">POS & CAJA</div>
+            <div class="sidebar-heading fw-bold ms-3">OPERACIONES DE CAJA</div>
         </li>
     @endif
 
@@ -139,7 +138,7 @@
         <li class="nav-item">
             {{-- CAMBIO: Lógica 'active' corregida --}}
             <a class="nav-link {{ request()->routeIs('ventas.tpv') ? 'active' : '' }}" href="{{ route('ventas.tpv') }}">
-                <i class="fas fa-cash-register me-2"></i> Ventas (POS)
+                <i class="fas fa-cash-register me-2"></i> Terminal de Venta
             </a>
         </li>
     @endif

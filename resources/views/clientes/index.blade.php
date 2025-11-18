@@ -5,13 +5,13 @@
     
     {{-- Barra de Título y Botón Crear --}}
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="mb-0">Gestión de Clientes</h2>
+        <h2 class="mb-0">Gestión de Expendios</h2>
         
         <div class="d-flex">
             {{-- Botón para CREAR CLIENTE --}}
             @if (Auth::user()->hasPermissionTo('clientes', 'alta'))
                 <a href="{{ route('clientes.create') }}" class="btn btn-primary" style="white-space: nowrap;">
-                    <i class="fas fa-user-plus me-1"></i> Crear Nuevo Cliente
+                    <i class="fas fa-user-plus me-1"></i> Crear Nuevo Expendio
                 </a>
             @endif
         </div>
@@ -22,7 +22,7 @@
         <table class="table table-striped table-hover align-middle">
             <thead class="table-dark">
                 <tr>
-                    <th>ID Cliente</th>
+                    <th>ID Expendio</th>
                     <th>Nombre</th>
                     <th>Fecha de Registro</th>
                     <th style="width: 200px;">Acciones</th>
@@ -57,7 +57,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="4" class="text-center text-muted p-4">No hay clientes registrados.</td>
+                    <td colspan="4" class="text-center text-muted p-4">No hay Expendios registrados.</td>
                 </tr>
                 @endforelse
             </tbody>

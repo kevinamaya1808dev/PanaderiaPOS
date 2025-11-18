@@ -7,7 +7,7 @@
         
         {{-- CAMBIO: Cabecera oscura y h4 para el título --}}
         <div class="card-header bg-dark text-white border-0">
-            <h4 class="mb-0"><i class="fas fa-user-plus me-2"></i> Registrar Nuevo Cliente</h4>
+            <h4 class="mb-0"><i class="fas fa-user-plus me-2"></i> Registrar Nuevo Expendio</h4>
         </div>
 
         {{-- CAMBIO: card-body con p-4 y sin alerta de sesión --}}
@@ -17,7 +17,7 @@
                 @csrf
 
                 <div class="mb-3">
-                    <label for="Nombre" class="form-label">Nombre del Cliente</label>
+                    <label for="Nombre" class="form-label">Nombre del Expendio</label>
                     {{-- CAMBIO: Input group con ícono --}}
                     <div class="input-group">
                         <span class="input-group-text"><i class="fas fa-user fa-fw"></i></span>
@@ -35,10 +35,10 @@
                     @if (Auth::user()->hasPermissionTo('clientes', 'alta'))
                         <button type="submit" class="btn btn-success">
                             {{-- CAMBIO: Ícono estandarizado --}}
-                            <i class="fas fa-save me-1"></i> Guardar Cliente
+                            <i class="fas fa-save me-1"></i> Guardar Expendio
                         </button>
                     @else
-                        <span class="text-danger">No tienes permiso para registrar clientes.</span>
+                        <span class="text-danger">No tienes permiso para registrar Expendio.</span>
                     @endif
                 </div>
             </form>

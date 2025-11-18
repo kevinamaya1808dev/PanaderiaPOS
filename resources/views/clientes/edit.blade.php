@@ -7,7 +7,7 @@
         
         {{-- CAMBIO: Cabecera oscura y h4 para el título --}}
         <div class="card-header bg-dark text-white border-0">
-            <h4 class="mb-0">Editar Cliente: {{ $cliente->Nombre }}</h4>
+            <h4 class="mb-0">Editar Expendio: {{ $cliente->Nombre }}</h4>
         </div>
 
         {{-- CAMBIO: card-body con p-4 --}}
@@ -17,7 +17,7 @@
                 @method('PUT')
 
                 <div class="mb-3">
-                    <label for="Nombre" class="form-label">Nombre del Cliente</label>
+                    <label for="Nombre" class="form-label">Nombre del Expendio</label>
                     {{-- CAMBIO: Input group con ícono --}}
                     <div class="input-group">
                         <span class="input-group-text"><i class="fas fa-user fa-fw"></i></span>
@@ -36,7 +36,7 @@
                     @if (Auth::user()->hasPermissionTo('clientes', 'editar'))
                         <button type="submit" class="btn btn-success">
                             {{-- CAMBIO: Ícono estandarizado --}}
-                            <i class="fas fa-sync me-1"></i> Actualizar Cliente
+                            <i class="fas fa-sync me-1"></i> Actualizar Expendio
                         </button>
                     @else
                         <span class="text-danger">No tienes permiso para actualizar este registro.</span>

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ config('app.name', 'Panadería "JIREH"') }}</title>
+    <title>{{ config('app.name', 'Panadería Kairos') }}</title>
 
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=inter:400,500,600&display=swap" rel="stylesheet" />
@@ -23,7 +23,7 @@
             </button>
             
             <a class="navbar-brand me-auto" href="{{ route('dashboard') }}">
-                <i class="fas fa-bread-slice me-2"></i> {{ config('app.name', 'Panadería') }} "JIREH"
+                <i class="fas fa-bread-slice me-2"></i> {{ config('app.name', 'Panadería') }} Kairos
             </a>
             
             <ul class="navbar-nav ms-auto">
