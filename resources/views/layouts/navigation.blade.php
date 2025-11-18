@@ -48,7 +48,7 @@
         <hr class="my-2 mx-3" style="border-top: 5px solid var(--color-header); opacity: 0.25;">
         
         <li class="nav-item"> {{-- Quitado mt-3 --}}
-            <div class="sidebar-heading fw-bold ms-3">CATÁLOGO</div>
+            <div class="sidebar-heading fw-bold ms-3">PRODUCTOS</div>
         </li>
     @endif
 
@@ -89,7 +89,7 @@
         <hr class="my-2 mx-3" style="border-top: 5px solid var(--color-header); opacity: 0.25;">
 
         <li class="nav-item"> {{-- Quitado mt-3 --}}
-            <div class="sidebar-heading fw-bold ms-3">CRM & COMPRAS</div>
+            <div class="sidebar-heading fw-bold ms-3">COMPRAS</div>
         </li>
     @endif
 
@@ -98,7 +98,7 @@
         <li class="nav-item">
             {{-- CAMBIO: Lógica 'active' corregida para incluir sub-rutas (*)--}}
             <a class="nav-link {{ request()->routeIs('clientes.*') ? 'active' : '' }}" href="{{ route('clientes.index') }}">
-                <i class="fas fa-address-book me-2"></i> Clientes (CRM)
+                <i class="fas fa-address-book me-2"></i> Clientes
             </a>
         </li>
     @endif

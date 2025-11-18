@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ config('app.name', 'Panadería POS') }}</title>
+    <title>{{ config('app.name', 'Panadería "JIREH"') }}</title>
 
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=inter:400,500,600&display=swap" rel="stylesheet" />
@@ -23,7 +23,7 @@
             </button>
             
             <a class="navbar-brand me-auto" href="{{ route('dashboard') }}">
-                <i class="fas fa-bread-slice me-2"></i> {{ config('app.name', 'Panadería') }} POS
+                <i class="fas fa-bread-slice me-2"></i> {{ config('app.name', 'Panadería') }} "JIREH"
             </a>
             
             <ul class="navbar-nav ms-auto">
@@ -32,7 +32,6 @@
                         <i class="fas fa-user-circle"></i> {{ Auth::user()->name ?? 'Usuario' }}
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
-                        <!-- 🔹 Se eliminó la opción "Perfil" -->
                         <li>
                             <form method="POST" action="{{ route('logout') }}">
                                 @csrf
@@ -81,28 +80,48 @@
         document.addEventListener('DOMContentLoaded', function () {
             
             const sidebar = document.getElementById('sidebar');
-            const mainContent = document.getElementById('main-content');
             const sidebarToggle = document.getElementById('sidebarToggle');
             const backdrop = document.getElementById('sidebarBackdrop');
+
+            function isMobile() {
+                return window.innerWidth < 992;
+            }
 
             function closeSidebar() {
                 sidebar.classList.add('collapsed');
                 backdrop.classList.remove('active');
-                localStorage.setItem('sidebarCollapsed', 'true');
+                document.body.classList.remove('sidebar-open'); // 🚫 desbloquear scroll fondo
+
+                if (isMobile()) {
+                    localStorage.setItem('sidebarCollapsedMobile', 'true');
+                } else {
+                    localStorage.setItem('sidebarCollapsedDesktop', 'true');
+                }
             }
             
             function openSidebar() {
                 sidebar.classList.remove('collapsed');
                 backdrop.classList.add('active');
-                localStorage.setItem('sidebarCollapsed', 'false');
+                document.body.classList.add('sidebar-open'); // 🚫 bloquear scroll fondo
+
+                if (isMobile()) {
+                    localStorage.setItem('sidebarCollapsedMobile', 'false');
+                } else {
+                    localStorage.setItem('sidebarCollapsedDesktop', 'false');
+                }
             }
 
-            if (window.innerWidth < 992 || localStorage.getItem('sidebarCollapsed') === 'true') {
-                 sidebar.classList.add('collapsed');
-                 backdrop.classList.remove('active');
+            // Estado inicial según dispositivo
+            if (isMobile()) {
+                if (localStorage.getItem('sidebarCollapsedMobile') === 'true') {
+                    sidebar.classList.add('collapsed');
+                } else {
+                    sidebar.classList.add('collapsed');
+                }
             } else {
-                 sidebar.classList.remove('collapsed');
-                 backdrop.classList.add('active');
+                if (localStorage.getItem('sidebarCollapsedDesktop') === 'true') {
+                    sidebar.classList.add('collapsed');
+                }
             }
 
             sidebarToggle.addEventListener('click', function () {
@@ -124,6 +143,7 @@
                 });
             });
 
+            // Auto-cierre de alertas
             const autoDismissAlerts = document.querySelectorAll('.auto-dismiss-alert');
             autoDismissAlerts.forEach(function(alert) {
                 setTimeout(function() {
@@ -131,9 +151,10 @@
                         const bsAlert = new bootstrap.Alert(alert);
                         bsAlert.close();
                     }
-                }, 5000); 
+                }, 5000);
             });
 
+            // Centrar el link activo
             try {
                 const activeLink = document.querySelector('.sidebar .nav-link.active');
                 if (sidebar && activeLink) {
