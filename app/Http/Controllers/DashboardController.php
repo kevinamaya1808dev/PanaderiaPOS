@@ -2,68 +2,91 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use App\Models\Venta;
 use App\Models\DetalleVenta;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
-    /**
-     * Muestra la página principal del dashboard que contendrá las gráficas.
-     */
     public function index()
     {
-        // Esta función simplemente retorna la vista.
-        // El JavaScript en esa vista se encargará de pedir los datos.
-        return view('dashboard');
+        // --- MÉTRICAS DE TARJETAS (Semanal y Mensual) ---
+        // (Este código se mantiene igual que antes para las tarjetas de arriba)
+        $metrics = [
+            'weekly' => ['ingresos' => 0, 'costos' => 0, 'utilidad' => 0],
+            'monthly' => ['ingresos' => 0, 'costos' => 0, 'utilidad' => 0],
+        ];
+
+        if (Auth::user()->hasPermissionTo('cargos', 'mostrar')) {
+            
+            // SEMANA
+            $startOfWeek = now()->startOfWeek(Carbon::MONDAY);
+            $endOfWeek = now()->endOfWeek(Carbon::SUNDAY);
+            $weeklyData = DetalleVenta::whereBetween('created_at', [$startOfWeek, $endOfWeek])
+                ->select(DB::raw('SUM(importe) as ingresos'), DB::raw('SUM(cantidad * costo_unitario) as costos'))
+                ->first();
+            $metrics['weekly']['ingresos'] = $weeklyData->ingresos ?? 0;
+            $metrics['weekly']['costos'] = $weeklyData->costos ?? 0;
+            $metrics['weekly']['utilidad'] = $metrics['weekly']['ingresos'] - $metrics['weekly']['costos'];
+
+            // MES
+            $startOfMonth = now()->startOfMonth();
+            $endOfMonth = now()->endOfMonth();
+            $monthlyData = DetalleVenta::whereBetween('created_at', [$startOfMonth, $endOfMonth])
+                ->select(DB::raw('SUM(importe) as ingresos'), DB::raw('SUM(cantidad * costo_unitario) as costos'))
+                ->first();
+            $metrics['monthly']['ingresos'] = $monthlyData->ingresos ?? 0;
+            $metrics['monthly']['costos'] = $monthlyData->costos ?? 0;
+            $metrics['monthly']['utilidad'] = $metrics['monthly']['ingresos'] - $metrics['monthly']['costos'];
+        }
+
+        return view('dashboard', compact('metrics'));
     }
 
     /**
-     * Proporciona los datos en formato JSON para las gráficas.
-     * Esta es la 'API' que llamará nuestro JavaScript.
+     * API para las Gráficas
      */
     public function getDashboardData(Request $request)
     {
         if (!auth()->user()->hasPermissionTo('cargos', 'mostrar')) {
-        // Retorna un error 403 (Prohibido)
-        return response()->json(['error' => 'No autorizado'], 403);
-    }      
-        // Recibe un 'month' (mes) opcional desde la petición
-        $mesSeleccionado = $request->input('month'); // ej. '12' para Diciembre
+            return response()->json(['error' => 'No autorizado'], 403);
+        }      
+        
+        $mesSeleccionado = $request->input('month');
 
-        // --- 1. Gráfica de Ventas por Mes (Siempre se calcula para todo el año) ---
-        $ventasPorMes = Venta::select(
-            DB::raw('MONTH(fecha_hora) as mes'),
-            DB::raw('SUM(total) as total_ventas')
+        // --- 1. GRÁFICA COMPARATIVA (Ventas vs Utilidad) ---
+        // Consultamos DetalleVenta para tener acceso al costo_unitario
+        $datosPorMes = DetalleVenta::select(
+            DB::raw('MONTH(created_at) as mes'),
+            DB::raw('SUM(importe) as total_ventas'),
+            // Utilidad = Importe - (Cantidad * Costo)
+            DB::raw('SUM(importe - (cantidad * costo_unitario)) as total_utilidad')
         )
-        ->whereYear('fecha_hora', now()->year) // Solo de este año
+        ->whereYear('created_at', now()->year)
         ->groupBy('mes')
         ->orderBy('mes')
         ->get();
 
-        // --- 2. Gráfica de Top 5 Productos ---
+        // --- 2. Gráfica de Top Productos ---
         $topProductos = DetalleVenta::join('productos', 'detalle_ventas.producto_id', '=', 'productos.id')
-            ->join('ventas', 'detalle_ventas.venta_id', '=', 'ventas.id') // Unir con ventas para filtrar por fecha
             ->select(
                 'productos.nombre',
                 DB::raw('SUM(detalle_ventas.cantidad) as total_cantidad')
             )
-            ->whereYear('ventas.fecha_hora', now()->year) // Solo de este año
-            
-            // Si se seleccionó un mes, filtra por ese mes
+            ->whereYear('detalle_ventas.created_at', now()->year)
             ->when($mesSeleccionado, function ($query) use ($mesSeleccionado) {
-                return $query->whereMonth('ventas.fecha_hora', $mesSeleccionado);
+                return $query->whereMonth('detalle_ventas.created_at', $mesSeleccionado);
             })
-            
             ->groupBy('productos.id', 'productos.nombre')
             ->orderBy('total_cantidad', 'desc')
             ->limit(5)
             ->get();
 
-        // --- 3. Devolver los datos como JSON ---
         return response()->json([
-            'ventas_por_mes' => $ventasPorMes,
+            'datos_por_mes' => $datosPorMes, // Enviamos ventas y utilidad juntos
             'top_productos' => $topProductos,
         ]);
     }

@@ -18,7 +18,8 @@ class DetalleVenta extends Model // <-- Nombre de la clase correcto
         'cantidad',
         'descripcion', // Opcional, según tu tabla
         'precio_unitario',
-        'importe',
+        'costo_unitario',
+        'importe'
     ];
 
     /**

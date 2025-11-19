@@ -50,6 +50,12 @@
                                         <span class="input-group-text"><i class="fas fa-dollar-sign fa-fw"></i></span>
                                         <input type="number" class="form-control @error('precio') is-invalid @enderror" id="precio" name="precio" value="{{ old('precio') }}" step="0.01" min="0" required>
                                     </div>
+                                    {{-- ¡AÑADE ESTE NUEVO BLOQUE DEBAJO! --}}
+                                <div class="mb-3">
+                                    <label for="costo" class="form-label">Precio de Costo ($)</label>
+                                    <input type="number" step="0.01" min="0" class="form-control" id="costo" name="costo" required placeholder="0.00">
+                                    <small class="form-text text-muted">Ingresa cuánto te cuesta producir o comprar este producto.</small>
+                                </div>
                                     @error('precio')
                                         <div class="invalid-feedback d-block">{{ $message }}</div>
                                     @enderror

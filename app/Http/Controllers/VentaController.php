@@ -66,6 +66,7 @@ class VentaController extends Controller
             'detalles.*.producto_id' => 'required|exists:productos,id',
             'detalles.*.cantidad' => 'required|integer|min:1',
             'detalles.*.precio_unitario' => 'required|numeric|min:0',
+            'detalles.*.costo_unitario' => 'required|numeric|min:0',
             'detalles.*.importe' => 'required|numeric|min:0',
             'status' => 'required|string|in:Pagada,Pendiente',
         ]);
@@ -99,6 +100,7 @@ class VentaController extends Controller
                     'producto_id' => $detalle['producto_id'],
                     'cantidad' => $detalle['cantidad'],
                     'precio_unitario' => $detalle['precio_unitario'],
+                    'costo_unitario' => $detalle['costo_unitario'],
                     'importe' => $detalle['importe'],
                     // 'descripcion' => $detalle['descripcion'] ?? null, // Si tuvieras descripciones
                 ]);

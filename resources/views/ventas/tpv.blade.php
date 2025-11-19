@@ -5,7 +5,6 @@
     
     @if ($cajaAbierta) 
         <div class="row h-100">
-            <!-- 1. Columna de Productos -->
             <div class="col-lg-8 d-flex flex-column h-100">
                 <h4 class="mb-3 text-primary"><i class="fas fa-bread-slice me-2"></i> Productos Disponibles</h4>
                 <div class="input-group mb-3 shadow-sm">
@@ -29,6 +28,7 @@
                                  data-id="{{ $producto->id }}" 
                                  data-name="{{ $producto->nombre }}" 
                                  data-price="{{ $producto->precio }}"
+                                 data-costo="{{ $producto->costo ?? 0 }}"
                                  data-stock="{{ $producto->inventario->stock ?? 0 }}"
                                  data-image="{{ $producto->imagen ? asset('storage/' . $producto->imagen) : 'https://placehold.co/100x100/EBF5FB/333333?text=Sin+Imagen' }}">
                                 
@@ -54,7 +54,6 @@
                 </div>
             </div>
 
-            <!-- 2. Columna del Carrito y Pago -->
             <div class="col-lg-4 d-flex flex-column border-start ps-4 h-100">
                 <h4 class="mb-3 text-danger"><i class="fas fa-shopping-cart me-2"></i> Orden Actual</h4>
                 
@@ -65,7 +64,8 @@
                     <div class="d-flex align-items-center">
                         <small class="me-2">Cliente:</small> 
                         <div class="input-group input-group-sm flex-grow-1">
-                            <input type="text" id="temporal-client-name" class="form-control" placeholder="Público General">
+                            {{-- CORRECCIÓN 1: autocomplete="off" para evitar molestias del navegador --}}
+                            <input type="text" id="temporal-client-name" class="form-control" placeholder="Público General" autocomplete="off">
                             <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Seleccionar Cliente Existente"></button>
                             <ul class="dropdown-menu dropdown-menu-end" id="client-dropdown-menu" style="max-height: 200px; overflow-y: auto;">
                                 <li><a class="dropdown-item select-client" href="#" data-client-id="" data-client-name="Público General">Público General</a></li>
@@ -77,7 +77,7 @@
                 
                 {{-- Carrito y Pago --}}
                 <div id="cart" class="flex-grow-1 overflow-auto border rounded p-3 mb-3 bg-light shadow-sm">
-                       <p class="text-center text-muted empty-cart-message">Añada productos para comenzar la venta.</p>
+                        <p class="text-center text-muted empty-cart-message">Añada productos para comenzar la venta.</p>
                 </div>
                 <div class="border-top pt-3">
                     {{-- Resumen Total --}}
@@ -116,22 +116,6 @@
              </a>
         </div>
     @endif
-</div>
-
-{{-- MODAL PARA SELECCIONAR CLIENTE --}}
-<div class="modal fade" id="clienteModal" tabindex="-1" aria-labelledby="clienteModalLabel" aria-hidden="true">
-   <div class="modal-dialog">
-     <div class="modal-content">
-       <div class="modal-header">
-         <h5 class="modal-title" id="clienteModalLabel">Seleccionar o Crear Cliente</h5>
-         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-       </div>
-       <div class="modal-body">
-         <p>Buscador y formulario de creación rápida de cliente (pendiente).</p>
-         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Usar Público General</button>
-       </div>
-     </div>
-   </div>
 </div>
 
 {{-- MODAL DE PAGO --}}
@@ -191,7 +175,7 @@
 {{-- ***** FIN MODAL DE PAGO ***** --}}
 
 
-{{-- MODAL DE CONFIRMACIÓN (El que ya tenías) --}}
+{{-- MODAL DE CONFIRMACIÓN --}}
 <div class="modal fade" id="confirmationModal" tabindex="-1" aria-labelledby="confirmationModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -214,9 +198,7 @@
     </div>
 </div>
 
-{{-- ========================================================== --}}
-{{-- CAMBIO 1: AÑADIDO EL HTML DEL MODAL DE ALERTA --}}
-{{-- ========================================================== --}}
+{{-- MODAL DE ALERTA --}}
 <div class="modal fade" id="alertModal" tabindex="-1" aria-labelledby="alertModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -247,6 +229,7 @@
         const cart = {}; 
         let selectedClientId = null; 
         let currentCategoryId = 'all'; 
+        // NOTA: Asegúrate de que tu variable clientes venga completa desde el controlador
         const clients = @json($clientes ?? []); 
         
         // Referencias del DOM
@@ -262,6 +245,7 @@
         const searchInput = document.getElementById('product-search'); 
         const csrfToken = document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').content : '';
         const emptyCartMessageHTML = '<p class="text-center text-muted empty-cart-message">Añada productos para comenzar la venta.</p>';
+        
         const paymentModalElement = document.getElementById('paymentModal');
         let paymentModal = null;
         if (paymentModalElement && typeof bootstrap !== 'undefined') { 
@@ -278,9 +262,6 @@
         const printFrame = document.getElementById('print-frame');
         const btnGenerarTicket = document.getElementById('btn-generar-ticket'); 
         
-        // ==========================================================
-        // CAMBIO 2: NUEVAS REFERENCIAS Y FUNCIONES PARA LOS MODALS
-        // ==========================================================
         const confirmationModalElement = document.getElementById('confirmationModal');
         let confirmationModal = null;
         if (confirmationModalElement && typeof bootstrap !== 'undefined') {
@@ -300,73 +281,49 @@
         const alertModalBody = document.getElementById('alertModalBody');
         const alertModalHeader = document.getElementById('alertModalHeader');
 
-        /**
-         * Muestra un modal de ALERTA (reemplaza alert())
-         * @param {string} body - El mensaje de alerta.
-         * @param {string} title - El título (ej. 'Stock Insuficiente').
-         * @param {string} type - 'danger' (rojo) o 'warning' (amarillo).
-         */
+        // --- Funciones de Modales ---
         function showAlertModal(body, title = 'Atención', type = 'danger') {
-            if (!alertModal) {
-                alert(body); // Fallback si el modal no cargó
-                return;
-            }
+            if (!alertModal) { alert(body); return; }
             alertModalTitle.textContent = title;
             alertModalBody.textContent = body;
-            
-            alertModalHeader.className = 'modal-header text-white'; // Resetea clases
+            alertModalHeader.className = 'modal-header text-white'; 
             alertModalHeader.classList.add(type === 'danger' ? 'bg-danger' : 'bg-warning');
-            
             alertModal.show();
         }
 
-        /**
-         * Muestra un modal de CONFIRMACIÓN (reemplaza confirm())
-         */
         function showConfirmationModal(title, body, confirmText, confirmClass, callback) {
             if (!confirmationModal) return;
-
             confirmationModalTitle.textContent = title;
             confirmationModalBody.textContent = body;
             confirmationModalConfirmButton.textContent = confirmText;
-
             confirmationModalConfirmButton.className = 'btn'; 
             confirmationModalHeader.className = 'modal-header text-white';
             confirmationModalConfirmButton.classList.add(confirmClass);
             
             let headerClass = confirmClass.replace('btn-', 'bg-');
-            if(headerClass.includes('outline')){
-                headerClass = 'bg-secondary';
-            }
+            if(headerClass.includes('outline')){ headerClass = 'bg-secondary'; }
             confirmationModalHeader.classList.add(headerClass);
 
-            // Re-crear el botón para evitar listeners duplicados
             const newConfirmButton = confirmationModalConfirmButton.cloneNode(true);
             confirmationModalConfirmButton.parentNode.replaceChild(newConfirmButton, confirmationModalConfirmButton);
-            
             const newButtonReference = document.getElementById('confirmationModalConfirmButton');
             
             newButtonReference.addEventListener('click', function() {
                 callback(); 
                 confirmationModal.hide(); 
             });
-
             confirmationModal.show();
         }
 
-        // ==========================================================
-        // LÓGICA DE ACTUALIZACIÓN DEL CARRITO
-        // ==========================================================
+        // --- Lógica de Carrito ---
         function setCartQuantity(id, newQty) {
             if (!cart[id]) return; 
             const item = cart[id];
             const stock = item.stock;
             newQty = parseInt(newQty, 10);
-            if (isNaN(newQty) || newQty < 0) {
-                newQty = 1; 
-            }
+            if (isNaN(newQty) || newQty < 0) newQty = 1; 
+            
             if (newQty > stock) {
-                // CAMBIO 3: Reemplazado alert()
                 showAlertModal(`Stock insuficiente. Solo quedan ${stock} unidades de ${item.name}.`, 'Stock Insuficiente', 'warning');
                 newQty = stock; 
             }
@@ -379,10 +336,9 @@
         }
         
         function updateCartUI() {
-            // ... (Lógica de UI sin cambios) ...
             let subtotal = 0;
             let itemCount = 0;
-            if (!cartDiv) { console.error("Elemento cartDiv no encontrado."); return; } 
+            if (!cartDiv) return; 
             cartDiv.innerHTML = ''; 
             for (const id in cart) { 
                 const item = cart[id];
@@ -419,7 +375,7 @@
             if (modalTotalDisplay) modalTotalDisplay.textContent = `$${subtotal.toFixed(2)}`; 
         }
 
-        function addItem(id, name, price, stock) {
+        function addItem(id, name, price, cost, stock) {
             stock = parseInt(stock) || 0; 
             if (stock <= 0) {
                 const cardElement = productListDiv ? productListDiv.querySelector(`.product-card[data-id="${id}"]`) : null;
@@ -431,11 +387,10 @@
             }
             const newQty = (cart[id] ? cart[id].qty : 0) + 1;
             if (newQty > stock) {
-                // CAMBIO 4: Reemplazado alert()
                 showAlertModal(`No puedes añadir más de ${stock} unidades de ${name}. Revisa tu stock.`, 'Stock Insuficiente', 'warning');
                 cart[id].qty = stock; 
             } else {
-                cart[id] = { name, price, qty: newQty, stock };
+                cart[id] = { name, price, cost: cost || 0, qty: newQty, stock };
             }
             updateCartUI();
         }
@@ -447,9 +402,7 @@
             }
         }
 
-        // ==========================================================
-        // LISTENERS DEL CARRITO (Sin cambios)
-        // ==========================================================
+        // Listeners de Carrito y Productos
         if (cartDiv) { 
             cartDiv.addEventListener('click', function(e) { 
                 const target = e.target;
@@ -476,16 +429,15 @@
                 if (card) {
                     const id = card.dataset.id;
                     const price = parseFloat(card.dataset.price);
+                    const cost = parseFloat(card.dataset.costo) || 0;
                     const name = card.dataset.name;
                     const stock = parseInt(card.dataset.stock);
-                    addItem(id, name, price, stock); 
+                    addItem(id, name, price, cost, stock); 
                 }
             }); 
         }
 
-        // ==========================================================
-        // LÓGICA DE FILTROS Y CLIENTES (Sin cambios)
-        // ==========================================================
+        // Filtros de Producto
         function filterProducts() { 
             const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : ''; 
             const productItems = productListDiv ? productListDiv.querySelectorAll('.product-item') : [];
@@ -508,14 +460,21 @@
             });
         });
         if (searchInput) { searchInput.addEventListener('input', filterProducts); }
-        populateClientDropdown(); // <-- Llamada movida al final
-        updateSelectedClient(null, 'Público General'); // <-- Llamada movida al final
+
+        // ==========================================================
+        // LÓGICA CLIENTES Y DROPDOWN (CORREGIDA)
+        // ==========================================================
+        
+        // 1. Llenar el dropdown inicialmente
         function populateClientDropdown() { 
             if (!clientDropdownMenu) return; 
+            // Limpiar todo menos las opciones fijas si las hubiera (aqui limpiamos todo lo dinámico)
             const items = clientDropdownMenu.querySelectorAll('li:not(:first-child):not(:nth-child(2))');
             items.forEach(item => item.remove());
+
             if (clients && clients.length > 0) { 
                 clients.forEach(client => {
+                    // NOTA: Usamos client.idCli y client.Nombre según tu código original
                     if (client.idCli !== 1) { 
                         const li = document.createElement('li');
                         const a = document.createElement('a');
@@ -534,33 +493,76 @@
                 clientDropdownMenu.appendChild(li);
             }
         }
+
+        // 2. Manejar la selección de cliente
         function updateSelectedClient(id, name) { 
             selectedClientId = id ? parseInt(id) : null;
             if(temporalClientInput){
-                temporalClientInput.value = (id || name === 'Público General') ? name : ''; 
-                temporalClientInput.placeholder = 'Público General'; 
-                if (!id && name === 'Público General') { 
-                    temporalClientInput.value = '';
+                if (!id && name === 'Público General') {
+                     temporalClientInput.value = '';
+                     temporalClientInput.placeholder = 'Público General';
+                } else {
+                     temporalClientInput.value = name;
                 }
             }
         }
-        if(clientDropdownMenu){ clientDropdownMenu.addEventListener('click', function(e) { 
-            e.preventDefault();
-            if (e.target.classList.contains('select-client')) {
-                const clientId = e.target.dataset.clientId;
-                const clientName = e.target.dataset.clientName;
-                updateSelectedClient(clientId, clientName);
-            }
-        }); }
-        if(temporalClientInput){ temporalClientInput.addEventListener('input', function() { 
-            const typedName = this.value.trim();
-            const existingClient = clients.find(c => c.Nombre.toLowerCase() === typedName.toLowerCase());
-            selectedClientId = existingClient ? existingClient.idCli : null; 
-        }); }
-        
-        // ==========================================================
-        // CAMBIO 5: Reemplazado confirm() en 'cancel-order'
-        // ==========================================================
+
+        // 3. Eventos del Dropdown (Click en un cliente)
+        if(clientDropdownMenu){ 
+            clientDropdownMenu.addEventListener('click', function(e) { 
+                e.preventDefault();
+                if (e.target.classList.contains('select-client')) {
+                    const clientId = e.target.dataset.clientId;
+                    const clientName = e.target.dataset.clientName;
+                    updateSelectedClient(clientId, clientName);
+                }
+            }); 
+        }
+
+        // 4. BUSCADOR EN TIEMPO REAL (CORREGIDO)
+        if(temporalClientInput){ 
+            // Mostrar dropdown al hacer click
+            temporalClientInput.addEventListener('click', function(){
+                 if(typeof bootstrap !== 'undefined'){
+                    const dropdownToggle = this.nextElementSibling;
+                    const dropdownInstance = bootstrap.Dropdown.getOrCreateInstance(dropdownToggle);
+                    dropdownInstance.show();
+                 }
+            });
+
+            // Filtrar al escribir
+            temporalClientInput.addEventListener('input', function() { 
+                const typedName = this.value.toLowerCase().trim();
+                
+                // Asignar lógica de ID base si existe match exacto
+                const existingClient = clients.find(c => c.Nombre.toLowerCase() === typedName);
+                selectedClientId = existingClient ? existingClient.idCli : null; 
+
+                // Mostrar el menú si estamos escribiendo
+                if(typeof bootstrap !== 'undefined'){
+                     const dropdownToggle = this.nextElementSibling;
+                     const dropdownInstance = bootstrap.Dropdown.getOrCreateInstance(dropdownToggle);
+                     dropdownInstance.show();
+                }
+
+                // Filtrar items visualmente
+                const listItems = clientDropdownMenu.querySelectorAll('li');
+                listItems.forEach(li => {
+                    // Ignorar separadores o items fijos
+                    const link = li.querySelector('a.select-client');
+                    if(link){
+                        const name = link.dataset.clientName.toLowerCase();
+                        if(name.includes(typedName)){
+                            li.style.display = ''; // Mostrar
+                        } else {
+                            li.style.display = 'none'; // Ocultar
+                        }
+                    }
+                });
+            }); 
+        }
+
+        // Cancelar Orden
         if(cancelButton){ 
             cancelButton.addEventListener('click', function() { 
                 if (Object.keys(cart).length > 0) {
@@ -569,7 +571,7 @@
                         '¿Estás seguro de que quieres cancelar esta orden y vaciar el carrito?',
                         'Sí, Cancelar',
                         'btn-danger',
-                        function() { // Callback con la lógica original
+                        function() { 
                             for (const id in cart) { delete cart[id]; }
                             updateSelectedClient(null, 'Público General'); 
                             updateCartUI();
@@ -579,9 +581,7 @@
             }); 
         }
 
-        // ==========================================================
-        // LÓGICA DEL MODAL DE PAGO
-        // ==========================================================
+        // Lógica Modal Pago
         if (paymentModalElement) {
             paymentModalElement.addEventListener('show.bs.modal', function() {
                 if (Object.keys(cart).length === 0) {
@@ -602,6 +602,7 @@
             });
         }
         if (modalMetodoPago) { modalMetodoPago.addEventListener('change', togglePaymentFields); }
+        
         function togglePaymentFields() { 
             if (!modalMetodoPago || !efectivoFields || !tarjetaFields) return;
             const isCash = modalMetodoPago.value === 'efectivo';
@@ -615,8 +616,10 @@
                  calculateChange(); 
             }
         }
+        
         if (modalMontoRecibido) { modalMontoRecibido.addEventListener('input', calculateChange); }
         if (modalFolioPago) { modalFolioPago.addEventListener('input', calculateChange); } 
+        
         function calculateChange() { 
             if (!modalMetodoPago || !modalCambioDisplay || !confirmPaymentBtn || !totalSpan) return; 
             const metodo = modalMetodoPago.value;
@@ -633,15 +636,17 @@
             }
         }
         
-        // ==========================================================
-        // LÓGICA DE PROCESAR PAGO ("Cobrar Ahora")
-        // ==========================================================
+        // Procesar Pago
         if (confirmPaymentBtn) { 
             confirmPaymentBtn.addEventListener('click', async function() { 
                 if (Object.keys(cart).length === 0 || !totalSpan) return;
 
                 const detalles = Object.keys(cart).map(id => ({ 
-                    producto_id: id, cantidad: cart[id].qty, precio_unitario: cart[id].price, importe: cart[id].price * cart[id].qty 
+                    producto_id: id, 
+                    cantidad: cart[id].qty, 
+                    precio_unitario: cart[id].price, 
+                    costo_unitario: cart[id].cost, 
+                    importe: cart[id].price * cart[id].qty 
                 }));
                 const total = parseFloat(totalSpan.textContent.replace('$', ''));
                 const metodoPago = modalMetodoPago ? modalMetodoPago.value : 'efectivo';
@@ -652,7 +657,6 @@
                 if (metodoPago === 'efectivo') {
                     montoEntregado = Math.max(0, montoRecibido - total); 
                     if (montoRecibido < total) {
-                        // CAMBIO 6: Reemplazado alert()
                         showAlertModal('Monto recibido insuficiente.', 'Error de Pago');
                         if(modalMontoRecibido) modalMontoRecibido.focus();
                         return; 
@@ -660,7 +664,6 @@
                 } else if (metodoPago === 'tarjeta') {
                     montoRecibido = total; 
                     if (!folioTarjeta) { 
-                        // CAMBIO 7: Reemplazado alert()
                         showAlertModal('Por favor, ingrese el folio o número de autorización.', 'Error de Pago');
                         if(modalFolioPago) modalFolioPago.focus();
                         return;
@@ -690,8 +693,6 @@
                         const printUrl = `{{ url('/ventas/imprimir') }}/${result.venta_id}`;
                         if (printFrame) {
                             printFrame.src = printUrl; 
-                        } else {
-                            console.error("El iframe de impresión no se encontró.");
                         }
                         for (const id in cart) { delete cart[id]; }
                         updateSelectedClient(null, 'Público General'); 
@@ -699,12 +700,10 @@
                     } else { 
                         let errMsg = result.message || 'Error.';
                         if (result.errors) { errMsg += '\nDetalles:\n'; for(const f in result.errors) {errMsg += `- ${result.errors[f].join(', ')}\n`;} }
-                        // CAMBIO 8: Reemplazado alert()
                         showAlertModal(errMsg, 'Error al Guardar Venta');
                     }
                 } catch (e) { 
                     console.error('Error al procesar venta:', e); 
-                    // CAMBIO 9: Reemplazado alert()
                     showAlertModal('Error de conexión o problema en el script. Revise la consola.', 'Error de Red');
                 } 
                 finally {
@@ -714,25 +713,24 @@
             }); 
         } 
 
-        
-        // ==========================================================
-        // LÓGICA PROCESAR TICKET PENDIENTE
-        // ==========================================================
+        // Generar Ticket Pendiente
         if (btnGenerarTicket) {
             btnGenerarTicket.addEventListener('click', function() {
                 if (Object.keys(cart).length === 0 || !totalSpan) return;
 
-                // CAMBIO 10: Reemplazado confirm()
                 showConfirmationModal(
                     'Generar Ticket',
                     '¿Generar ticket para pagar en caja? La venta quedará como pendiente.',
                     'Sí, Generar Ticket',
                     'btn-primary',
-                    async function() { // Inicio del callback async
-                        
+                    async function() { 
                         const detalles = Object.keys(cart).map(id => ({ 
-                            producto_id: id, cantidad: cart[id].qty, precio_unitario: cart[id].price, importe: cart[id].price * cart[id].qty 
-                        }));
+                        producto_id: id, 
+                        cantidad: cart[id].qty, 
+                        precio_unitario: cart[id].price, 
+                        costo_unitario: cart[id].cost,
+                        importe: cart[id].price * cart[id].qty 
+                    }));
                         const total = parseFloat(totalSpan.textContent.replace('$', ''));
                         const payload = {
                             _token: csrfToken, 
@@ -759,24 +757,17 @@
 
                             if (response.ok) {
                                 const printUrl = `{{ url('/ventas/imprimir') }}/${result.venta_id}`;
-                                if (printFrame) {
-                                    printFrame.src = printUrl; 
-                                } else {
-                                    console.error("El iframe de impresión no se encontró.");
-                                }
+                                if (printFrame) { printFrame.src = printUrl; }
                                 for (const id in cart) { delete cart[id]; }
                                 updateSelectedClient(null, 'Público General'); 
                                 updateCartUI();
-                            
                             } else { 
                                 let errMsg = result.message || 'Error.';
                                 if (result.errors) { errMsg += '\nDetalles:\n'; for(const f in result.errors) {errMsg += `- ${result.errors[f].join(', ')}\n`;} }
-                                // CAMBIO 11: Reemplazado alert()
                                 showAlertModal(errMsg, 'Error al Generar Ticket');
                             }
                         } catch (e) { 
                             console.error('Error al procesar venta pendiente:', e); 
-                            // CAMBIO 12: Reemplazado alert()
                             showAlertModal('Error de conexión o problema en el script. Revise la consola.', 'Error de Red');
                         } 
                         finally {
@@ -784,11 +775,10 @@
                             btnGenerarTicket.innerHTML = '<i class="fas fa-ticket-alt me-2"></i> Generar Ticket (Pagar en Caja)';
                             updateCartUI(); 
                         }
-                    } // Fin del callback async
-                ); // Fin de showConfirmationModal
+                    } 
+                ); 
             });
         } 
-
 
         // Inicializar
         updateCartUI();
@@ -799,7 +789,6 @@
 </script>
 
 <style>
-/* Estilos */
 .product-card:hover { 
     transform: translateY(-3px);
     box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
@@ -808,14 +797,18 @@
 .fs-sm { 
     font-size: 0.85rem; 
 } 
-/* Estilo para el input de cantidad en el carrito */
 .cart-item-qty {
-    -moz-appearance: textfield; /* Para Firefox */
+    -moz-appearance: textfield; 
 }
 .cart-item-qty::-webkit-outer-spin-button,
 .cart-item-qty::-webkit-inner-spin-button {
     -webkit-appearance: none;
     margin: 0;
+}
+/* Opcional: Resaltar coincidencia en dropdown */
+.dropdown-item.active-filter {
+    background-color: #f8f9fa;
+    color: #000;
 }
 </style>
 

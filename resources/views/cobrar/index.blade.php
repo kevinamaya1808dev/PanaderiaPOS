@@ -4,7 +4,6 @@
 <div class="container">
     <h2 class="mb-4">Cobrar Ventas Pendientes</h2>
 
-    <!-- 1. Campo de Búsqueda de Folio (Para tickets perdidos) -->
     <div class="row justify-content-center">
         <div class="col-md-8">
             <div class="input-group input-group-lg shadow-sm mb-3">
@@ -18,12 +17,10 @@
         </div>
     </div>
 
-    <!-- 2. Área de Resultados (Sigue igual) -->
     <div id="venta-encontrada-card" class="card shadow-lg mt-3" style="display: none;">
         {{-- Esta tarjeta se llena con JavaScript cuando se busca o selecciona --}}
     </div>
 
-    <!-- 3. ¡NUEVO! Cola de Ventas Pendientes -->
     <hr class="my-4">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h4 class="mb-0">Cola de Pagos Pendientes</h4>
@@ -61,7 +58,6 @@
                             </td>
                             <td class="fw-bold">${{ number_format($venta->total, 2) }}</td>
                             <td>
-                                {{-- Este botón ahora pasa el ID a buscarVenta() --}}
                                 <button class="btn btn-sm btn-warning btn-cobrar-lista" data-folio="{{ $venta->id }}">
                                     Cobrar
                                 </button>
@@ -80,7 +76,7 @@
 
 
 {{-- ========================================================== --}}
-{{-- MODAL DE PAGO (Sin cambios) --}}
+{{-- MODAL DE PAGO --}}
 {{-- ========================================================== --}}
 <div class="modal fade" id="paymentModal" tabindex="-1" aria-labelledby="paymentModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered">
@@ -95,7 +91,6 @@
                     <div class="fs-1 fw-bolder text-danger" id="modal-total-display">$0.00</div>
                 </div>
                 
-                {{-- (Campos del modal: efectivo, tarjeta, etc. - Sin cambios) --}}
                 <div class="mb-3">
                     <label for="modal-metodo-pago" class="form-label fw-bold">Método de Pago</label>
                     <select class="form-select form-select-lg" id="modal-metodo-pago">
@@ -132,7 +127,27 @@
 </div>
 {{-- ***** FIN MODAL DE PAGO ***** --}}
 
-{{-- ***** IFRAME OCULTO (Sin cambios) ***** --}}
+{{-- ========================================================== --}}
+{{-- ¡NUEVO! MODAL DE ALERTA (Estilo Profesional) --}}
+{{-- ========================================================== --}}
+<div class="modal fade" id="alertModal" tabindex="-1" aria-labelledby="alertModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" id="alertModalHeader">
+                <h5 class="modal-title" id="alertModalTitle">Alerta</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="alertModalBody">
+                ...
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- ***** IFRAME OCULTO ***** --}}
 <iframe id="print-frame" name="printFrame" style="display: none; border: 0;"></iframe>
 
 @endsection
@@ -147,14 +162,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const searchError = document.getElementById('search-error');
     const ventaCard = document.getElementById('venta-encontrada-card');
     
-    // --- ¡NUEVAS REFERENCIAS! ---
     const listaPendientesBody = document.getElementById('lista-pendientes-body');
     const loadingSpinner = document.getElementById('loading-spinner');
     
-    // Referencias de la Tarjeta (se llenan dinámicamente)
-    // (Ahora la tarjeta se crea desde JS)
-
-    // Referencias del Modal (Copiadas del TPV)
+    // Referencias del Modal de Pago
     let paymentModal = null;
     const paymentModalElement = document.getElementById('paymentModal');
     if (paymentModalElement) {
@@ -172,10 +183,45 @@ document.addEventListener('DOMContentLoaded', function() {
     const printFrame = document.getElementById('print-frame');
     const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
 
-    let ventaEncontrada = null; // Guardará el objeto Venta
+    let ventaEncontrada = null; 
 
-    // --- Lógica de Búsqueda (AHORA ACEPTA UN FOLIO) ---
-    searchBtn.addEventListener('click', () => buscarVenta(null)); // El botón usa el input
+    // --- Referencias del Modal de Alerta (NUEVO) ---
+    const alertModalElement = document.getElementById('alertModal');
+    let alertModal = null;
+    if (alertModalElement) {
+        alertModal = new bootstrap.Modal(alertModalElement);
+    }
+    const alertModalTitle = document.getElementById('alertModalTitle');
+    const alertModalBody = document.getElementById('alertModalBody');
+    const alertModalHeader = document.getElementById('alertModalHeader');
+
+    // --- Función Helper para Mostrar Alertas ---
+    function showAlertModal(body, title = 'Atención', type = 'danger') {
+        if (!alertModal) { alert(body); return; } // Fallback por seguridad
+        alertModalTitle.textContent = title;
+        alertModalBody.textContent = body;
+        
+        // Reset classes
+        alertModalHeader.className = 'modal-header text-white'; 
+        
+        // Asignar color según tipo
+        if (type === 'danger') {
+            alertModalHeader.classList.add('bg-danger');
+        } else if (type === 'success') {
+            alertModalHeader.classList.add('bg-success');
+        } else if (type === 'warning') {
+            alertModalHeader.classList.add('bg-warning');
+            alertModalHeader.classList.remove('text-white'); // Warning suele ir mejor con texto oscuro
+            alertModalHeader.classList.add('text-dark');
+        } else {
+            alertModalHeader.classList.add('bg-primary');
+        }
+
+        alertModal.show();
+    }
+
+    // --- Lógica de Búsqueda ---
+    searchBtn.addEventListener('click', () => buscarVenta(null)); 
     searchInput.addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
             buscarVenta(null);
@@ -193,11 +239,11 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = await response.json();
 
             if (!response.ok) {
+                // Aquí usamos mostrarError (inline) porque es mejor para búsquedas que un popup
                 mostrarError(data.error || 'Error al buscar la venta.');
             } else {
-                ventaEncontrada = data; // Guardamos la venta
+                ventaEncontrada = data; 
                 mostrarDatosVenta(data);
-                // Hacer scroll y resaltar
                 window.scrollTo({ top: 0, behavior: 'smooth' });
                 ventaCard.classList.add('border-warning');
             }
@@ -219,16 +265,13 @@ document.addEventListener('DOMContentLoaded', function() {
         ventaEncontrada = null;
     }
 
-    // Esta función ahora construye el HTML de la tarjeta
     function mostrarDatosVenta(venta) {
-        // Formatear productos
         let productosHtml = '<ul class="list-unstyled mb-0" style="font-size: 0.9em;">';
         venta.detalles.forEach(detalle => {
             productosHtml += `<li>${detalle.cantidad} x ${detalle.producto.nombre} ($${parseFloat(detalle.importe).toFixed(2)})</li>`;
         });
         productosHtml += '</ul>';
 
-        // Llenar el HTML de la tarjeta
         ventaCard.innerHTML = `
             <div class="card-header bg-warning">
                 <h4 class="mb-0">Venta Pendiente de Pago</h4>
@@ -256,10 +299,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             </div>`;
         
-        // Mostrar la tarjeta
         ventaCard.style.display = 'block';
 
-        // Llenar el modal (prepararlo)
         modalFolioDisplay.textContent = `#${venta.id}`;
         modalTotalDisplay.textContent = `$${parseFloat(venta.total).toFixed(2)}`;
         
@@ -270,7 +311,7 @@ document.addEventListener('DOMContentLoaded', function() {
         calculateChange();
     }
 
-    // --- Lógica del Modal de Pago (Sin cambios) ---
+    // --- Lógica del Modal de Pago ---
     modalMetodoPago.addEventListener('change', togglePaymentFields);
     modalMontoRecibido.addEventListener('input', calculateChange);
     modalFolioPago.addEventListener('input', calculateChange); 
@@ -305,7 +346,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // --- Lógica de Confirmar Pago (Sin cambios) ---
+    // --- Lógica de Confirmar Pago (MODIFICADA PARA USAR ALERT MODAL) ---
     confirmPaymentBtn.addEventListener('click', async function() {
         if (!ventaEncontrada) return;
 
@@ -318,13 +359,17 @@ document.addEventListener('DOMContentLoaded', function() {
         if (metodoPago === 'efectivo') {
             montoEntregado = Math.max(0, montoRecibido - total); 
             if (montoRecibido < total) {
-                alert('Monto recibido insuficiente.'); return; 
+                // REEMPLAZO: alert('Monto recibido insuficiente.');
+                showAlertModal('Monto recibido insuficiente.', 'Atención', 'warning');
+                return; 
             }
         } else {
             montoRecibido = total; 
             montoEntregado = 0;
             if (!folioTarjeta) {
-                alert('Por favor, ingrese el folio o número de autorización.'); return;
+                // REEMPLAZO: alert('Por favor, ingrese el folio...');
+                showAlertModal('Por favor, ingrese el folio o número de autorización.', 'Falta Información', 'warning');
+                return;
             }
         }
         
@@ -350,15 +395,25 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (response.ok) {
                 if (paymentModal) paymentModal.hide();
-                alert(result.message); 
-                location.reload();
+                
+                // REEMPLAZO: alert(result.message); location.reload();
+                // Ahora mostramos el modal de éxito y recargamos SOLO cuando se cierre
+                showAlertModal(result.message, '¡Pago Registrado!', 'success');
+                
+                // Event listener de una sola vez para recargar la página al cerrar el modal de éxito
+                alertModalElement.addEventListener('hidden.bs.modal', function () {
+                    location.reload();
+                }, { once: true });
 
             } else { 
-                alert('Error: \n' + (result.error || 'Error desconocido'));
+                // REEMPLAZO: alert('Error...');
+                let errorMsg = result.error || 'Error desconocido';
+                showAlertModal(errorMsg, 'Error al procesar', 'danger');
             }
         } catch (e) { 
             console.error('Error al procesar el pago:', e); 
-            alert('Error de conexión.');
+            // REEMPLAZO: alert('Error de conexión.');
+            showAlertModal('Error de conexión con el servidor.', 'Error de Red', 'danger');
         } 
         finally {
             this.disabled = false;
@@ -366,22 +421,17 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // --- ¡NUEVA LÓGICA DE POLLING! ---
-    
-    // 1. Event listener para la tabla (delegación)
+    // --- Lógica de Polling ---
     listaPendientesBody.addEventListener('click', function(e) {
-        // e.target es el elemento exacto (ej. el <i class="...
-        // e.target.closest(...) busca el botón más cercano
         const targetButton = e.target.closest('.btn-cobrar-lista');
         if (targetButton) {
             const folio = targetButton.dataset.folio;
-            buscarVenta(folio); // Llama a la función de búsqueda
+            buscarVenta(folio); 
         }
     });
 
-    // 2. Función para renderizar la lista
     function renderListaPendientes(ventas) {
-        listaPendientesBody.innerHTML = ''; // Limpiar la tabla
+        listaPendientesBody.innerHTML = ''; 
         if (ventas.length === 0) {
             listaPendientesBody.innerHTML = `
                 <tr id="no-pendientes-row">
@@ -396,7 +446,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 productosHtml += '</ul>';
 
                 const tr = document.createElement('tr');
-               tr.innerHTML = `
+                tr.innerHTML = `
                     <td class="fw-bold">${venta.id}</td>
                     <td>${new Date(venta.fecha_hora).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit' })}</td>
                     <td>${venta.user.name ?? 'N/A'}</td>
@@ -411,24 +461,21 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // 3. Función para cargar la lista
     async function cargarListaPendientes() {
-        loadingSpinner.style.display = 'block'; // Mostrar spinner
+        loadingSpinner.style.display = 'block'; 
         try {
             const response = await fetch(`{{ route('cobrar.listaPendientes') }}`);
             if (response.ok) {
                 const ventas = await response.json();
-                renderListaPendientes(ventas); // Dibujar la tabla
+                renderListaPendientes(ventas); 
             }
         } catch (e) {
             console.error("Error al refrescar la lista:", e);
         } finally {
-            loadingSpinner.style.display = 'none'; // Ocultar spinner
+            loadingSpinner.style.display = 'none'; 
         }
     }
 
-    // 4. Iniciar el Polling (Refresco automático)
-    // Refresca la lista cada 10 segundos (10000 milisegundos)
     setInterval(cargarListaPendientes, 10000); 
 
 });
