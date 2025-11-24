@@ -6,7 +6,7 @@
         
         {{-- Cabecera --}}
         <div class="card-header bg-dark text-white border-0">
-            <h4 class="mb-0"><i class="fas fa-exchange-alt me-2"></i> Registrar Movimiento</h4>
+            <h4 class="mb-0"><i class="fas fa-exchange-alt me-2"></i> Registrar Compra</h4>
         </div>
 
         <div class="card-body p-4">
