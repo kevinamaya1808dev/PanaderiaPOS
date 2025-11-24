@@ -16,6 +16,7 @@ use App\Http\Controllers\ProveedorController;
 use App\Http\Controllers\CompraController;
 use App\Http\Controllers\VentaController;
 use App\Http\Controllers\CobrarVentaController;
+use App\Http\Controllers\HistorialCajasController;
 
 /*
 |--------------------------------------------------------------------------
@@ -235,5 +236,14 @@ Route::middleware(['auth', 'permiso:cajas,mostrar'])->group(function () {
 
     Route::get('/cobrar-pendientes/lista', [CobrarVentaController::class, 'getVentasPendientes'])->name('cobrar.listaPendientes');
 });
+// Grupo protegido: Solo Admin (o quien tenga permiso de ver cargos/reportes)
+Route::middleware(['auth', 'permiso:cargos,mostrar'])->group(function () {
+    
+    // Listado General
+    Route::get('/historial-cajas', [HistorialCajasController::class, 'index'])->name('historial_cajas.index');
+    
+    // Detalle de una caja específica
+    Route::get('/historial-cajas/{caja}', [HistorialCajasController::class, 'show'])->name('historial_cajas.show');
 
+});
 });
