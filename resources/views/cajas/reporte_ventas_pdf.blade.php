@@ -22,7 +22,7 @@
 <body>
 
     <div class="header">
-        <h1>Panadería "Tu Nombre"</h1>
+        <h1>Panadería Kairos</h1>
         <p>Reporte de Ventas del Turno</p>
         <p><strong>Cajero:</strong> {{ $cajaAbierta->user->name ?? 'N/A' }}</p>
         <p><strong>Fecha de Apertura:</strong> {{ $cajaAbierta->fecha_hora_apertura->format('d/m/Y') }}</p>

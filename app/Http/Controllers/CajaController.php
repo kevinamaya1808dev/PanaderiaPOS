@@ -15,45 +15,45 @@ class CajaController extends Controller
      * Muestra el estado actual de la caja.
      */
     public function index()
-{
-    // 1. Buscamos si el usuario tiene una CAJA ABIERTA
-    $caja = Caja::where('user_id', Auth::id())
+    {
+        // 1. Buscamos si el usuario tiene una CAJA ABIERTA
+        $caja = Caja::where('user_id', Auth::id())
                 ->where('estado', 'abierta')
                 ->first();
 
-    if (!$caja) {
-        // Reutilizamos el index, pero le decimos que NO hay caja abierta
-        return view('cajas.index', ['cajaAbierta' => null]); 
-    }
+        if (!$caja) {
+            // Reutilizamos el index, pero le decimos que NO hay caja abierta
+            return view('cajas.index', ['cajaAbierta' => null]); 
+        }
 
-    // 2. Traemos las VENTAS por FECHA (ya que no tienes caja_id)
-    // Buscamos ventas hechas DESPUÉS de la hora de apertura
-    $ventas = Venta::where('created_at', '>=', $caja->fecha_hora_apertura)
-                   ->orderBy('created_at', 'desc')
-                   ->get();
+        // 2. Traemos las VENTAS por FECHA (ya que no tienes caja_id)
+        // Buscamos ventas hechas DESPUÉS de la hora de apertura
+        $ventas = Venta::where('created_at', '>=', $caja->fecha_hora_apertura)
+                    ->orderBy('created_at', 'desc')
+                    ->get();
 
-    // 3. Traemos los GASTOS de la misma forma (por fecha/hora)
-    $gastos = MovimientoCaja::where('caja_id', $caja->id)
+        // 3. Traemos los GASTOS de la misma forma (por fecha/hora)
+        $gastos = MovimientoCaja::where('caja_id', $caja->id)
                             ->where('tipo', 'egreso')
                             ->orderBy('created_at', 'desc')
                             ->get();
 
-    // 4. Cálculos
-    $totalVentasEfectivo = $ventas->where('metodo_pago', 'efectivo')->sum('total');
-    $totalGastos = $gastos->sum('monto'); 
+        // 4. Cálculos
+        $totalVentasEfectivo = $ventas->where('metodo_pago', 'efectivo')->sum('total');
+        $totalGastos = $gastos->sum('monto'); 
 
-    // Saldo = Inicial + Ventas - Gastos
-    $saldoActual = $caja->saldo_inicial + $totalVentasEfectivo - $totalGastos;
+        // Saldo = Inicial + Ventas - Gastos
+        $saldoActual = $caja->saldo_inicial + $totalVentasEfectivo - $totalGastos;
 
-   return view('cajas.index', [
-        'cajaAbierta' => $caja,  
-        'ventas' => $ventas,
-        'gastos' => $gastos,
-        'saldoActual' => $saldoActual,
-        'totalGastos' => $totalGastos,
-        'ventasEfectivo' => $totalVentasEfectivo 
-    ]);
-}
+       return view('cajas.index', [
+            'cajaAbierta' => $caja,  
+            'ventas' => $ventas,
+            'gastos' => $gastos,
+            'saldoActual' => $saldoActual,
+            'totalGastos' => $totalGastos,
+            'ventasEfectivo' => $totalVentasEfectivo 
+        ]);
+    }
 
     /**
      * Abre una nueva caja (Sin cambios necesarios aquí).
@@ -174,7 +174,7 @@ class CajaController extends Controller
                            ->where('user_id', Auth::id())
                            ->where('estado', 'abierta')
                            ->first();
-                           
+                            
         if (!$cajaAbierta) {
             return redirect()->route('cajas.index')->with('error', 'Error: No se encontró tu caja abierta.');
         }
@@ -193,38 +193,40 @@ class CajaController extends Controller
     }
 
     /**
- * Exporta las ventas del turno actual a un archivo CSV.
- */
-/**
-     * Exporta las ventas del turno actual a un archivo CSV.
-     *
-     * (VERSIÓN 3 - AGRUPANDO PRODUCTOS POR VENTA)
+     * Exporta las ventas y gastos del turno actual a un archivo CSV.
+     * (MODIFICADO: INCLUYE GASTOS Y RESUMEN, SOLO FECHA d/m/Y)
      */
     public function exportarVentasTurno()
     {
-        // 1. Encontrar la caja abierta del usuario
-        $cajaAbierta = \App\Models\Caja::where('user_id', \Illuminate\Support\Facades\Auth::id())
-                            ->where('estado', 'abierta')
-                            ->first();
+        // 1. Encontrar la caja abierta
+        $cajaAbierta = Caja::where('user_id', Auth::id())
+            ->where('estado', 'abierta')
+            ->first();
 
         if (!$cajaAbierta) {
             return redirect()->route('cajas.index')->with('error', 'No hay ninguna caja abierta para exportar.');
         }
 
-        // 2. Obtener todas las ventas Y sus detalles (productos) de este turno
-        $ventas = \App\Models\Venta::with('detalles.producto', 'user') // Carga las relaciones
-            ->where('user_id', \Illuminate\Support\Facades\Auth::id())
+        // 2. Obtener VENTAS
+        $ventas = Venta::with('detalles.producto', 'user')
+            ->where('user_id', Auth::id())
             ->where('fecha_hora', '>=', $cajaAbierta->fecha_hora_apertura)
             ->orderBy('fecha_hora', 'asc')
             ->get();
 
-        if ($ventas->isEmpty()) {
-            return redirect()->route('cajas.index')->with('error', 'No hay ventas para exportar en este turno.');
+        // 3. Obtener GASTOS (Movimientos de tipo 'egreso')
+        $gastos = MovimientoCaja::where('caja_id', $cajaAbierta->id)
+            ->where('tipo', 'egreso')
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        if ($ventas->isEmpty() && $gastos->isEmpty()) {
+            return redirect()->route('cajas.index')->with('error', 'No hay registros para exportar en este turno.');
         }
 
-        // 3. Definir el nombre del archivo y las cabeceras
-        $fileName = "Reporte_Ventas_Caja_{$cajaAbierta->id}_{$cajaAbierta->fecha_hora_apertura->format('Y-m-d')}.csv";
-        
+        // 4. Definir nombre del archivo
+        $fileName = "Reporte_Caja_Completo_{$cajaAbierta->id}_{$cajaAbierta->fecha_hora_apertura->format('Y-m-d')}.csv";
+
         $headers = [
             "Content-type"        => "text/csv",
             "Content-Disposition" => "attachment; filename=$fileName",
@@ -233,56 +235,106 @@ class CajaController extends Controller
             "Expires"             => "0"
         ];
 
-        // 4. Crear la respuesta (el archivo)
-        return response()->stream(function() use ($ventas) {
+        // 5. Crear la respuesta
+        return response()->stream(function() use ($ventas, $gastos) {
             
             $file = fopen('php://output', 'w');
             
-            // (IMPORTANTE) Añadir un BOM para que Excel lea acentos y 'ñ'
+            // BOM para acentos
             fputs($file, "\xEF\xBB\xBF");
 
-            // 5. Añadir la fila de Títulos (Cabecera)
+            // ==========================================
+            // SECCIÓN 1: VENTAS
+            // ==========================================
+            fputcsv($file, ['REPORTE DE VENTAS']);
             fputcsv($file, [
                 'ID Venta', 
-                'Fecha', 
+                'Fecha', // Título "Fecha"
                 'Cajero', 
                 'Método Pago',
-                'Productos (Desglose)', 
-                'Total Venta'           
+                'Productos', 
+                'Total Venta'          
             ]);
 
-            // 6. Llenar con los datos
-            foreach ($ventas as $venta) {
-                
-                $fechaHora = \Carbon\Carbon::parse($venta->fecha_hora);
+            $totalVentas = 0;
 
-                // --- ¡unir productos! ---
+            foreach ($ventas as $venta) {
+                $fecha = \Carbon\Carbon::parse($venta->fecha_hora);
+                
+                // Procesar productos
                 $productosArray = [];
                 foreach ($venta->detalles as $detalle) {
                     $nombreProducto = $detalle->producto->nombre ?? 'N/A';
                     $productosArray[] = "{$detalle->cantidad} x {$nombreProducto}";
                 }
-                
-                // Unimos todos los productos con un salto de línea (Excel lo leerá)
-                $productosString = implode("\n", $productosArray);
+                $productosString = implode(" | ", $productosArray);
 
                 fputcsv($file, [
                     $venta->id,
-                    $fechaHora->format('d/m/Y'),
+                    $fecha->format('d/m/Y'), // <--- SOLO FECHA
                     $venta->user->name ?? 'N/A',
                     ucfirst($venta->metodo_pago),
                     $productosString,    
                     $venta->total          
                 ]);
+
+                if($venta->metodo_pago == 'efectivo') {
+                    $totalVentas += $venta->total;
+                }
             }
+
+            // ==========================================
+            // SEPARADOR
+            // ==========================================
+            fputcsv($file, []); 
+            fputcsv($file, []); 
+
+            // ==========================================
+            // SECCIÓN 2: GASTOS
+            // ==========================================
+            fputcsv($file, ['REPORTE DE GASTOS / SALIDAS']);
+            fputcsv($file, [
+                'Fecha', // Título "Fecha"
+                'Descripción del Gasto', 
+                'Responsable',
+                '', 
+                '', 
+                'Monto Retirado'          
+            ]);
+
+            $totalGastos = 0;
+
+            foreach ($gastos as $gasto) {
+                fputcsv($file, [
+                    $gasto->created_at->format('d/m/Y'), // <--- SOLO FECHA
+                    $gasto->descripcion,
+                    $gasto->user->name ?? 'Sistema',
+                    '', 
+                    '', 
+                    '-' . $gasto->monto 
+                ]);
+                $totalGastos += $gasto->monto;
+            }
+
+            // ==========================================
+            // SEPARADOR Y RESUMEN FINAL
+            // ==========================================
+            fputcsv($file, []);
+            fputcsv($file, []);
+            fputcsv($file, ['RESUMEN DEL TURNO']);
+            
+            fputcsv($file, ['', '', '', '', 'Total Ventas Efectivo:', $totalVentas]);
+            fputcsv($file, ['', '', '', '', 'Total Gastos:', '-' . $totalGastos]);
+            fputcsv($file, ['', '', '', '', 'BALANCE FINAL:', $totalVentas - $totalGastos]);
             
             fclose($file);
         }, 200, $headers);
     }
-public function exportarVentasTurnoPDF()
+
+    public function exportarVentasTurnoPDF()
     {
         // 1. Obtener la caja abierta (igual que en exportarVentasTurno)
-        $cajaAbierta = \App\Models\Caja::where('user_id', \Illuminate\Support\Facades\Auth::id())
+        $cajaAbierta = Caja::where('user_id', Auth::id())
                             ->where('estado', 'abierta')
                             ->first();
 
@@ -294,14 +346,14 @@ public function exportarVentasTurnoPDF()
         //    porque el PDF también necesita los resúmenes.
 
         // Ventas (con detalles)
-        $ventas = \App\Models\Venta::with('detalles.producto', 'user')
-            ->where('user_id', \Illuminate\Support\Facades\Auth::id())
+        $ventas = Venta::with('detalles.producto', 'user')
+            ->where('user_id', Auth::id())
             ->where('fecha_hora', '>=', $cajaAbierta->fecha_hora_apertura)
             ->orderBy('fecha_hora', 'asc')
             ->get();
         
         // Movimientos
-        $movimientos = \App\Models\MovimientoCaja::where('caja_id', $cajaAbierta->id)
+        $movimientos = MovimientoCaja::where('caja_id', $cajaAbierta->id)
             ->orderBy('created_at', 'desc')
             ->get();
 
