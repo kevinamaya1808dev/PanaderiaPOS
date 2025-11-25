@@ -72,6 +72,7 @@
 
                         <h5 class="mt-3">Resumen del Turno Actual</h5>
 
+                        {{-- 1. SALDO INICIAL --}}
                         <p class="d-flex justify-content-between mb-1">
                             <span>Saldo Inicial:</span>
                             <span class="badge bg-secondary fs-6">
@@ -79,24 +80,35 @@
                             </span>
                         </p>
 
+                        {{-- 2. VENTAS --}}
                         <p class="d-flex justify-content-between mb-1 text-success">
                             <span>+ Ventas en Efectivo:</span>
                             <span class="fw-bold">
-                                ${{ number_format($ventasEfectivo ?? 0, 2) }}
+                                {{-- Usamos variable del controller o fallback a 0 --}}
+                                +${{ number_format($ventasEfectivo ?? $totalVentasEfectivo ?? 0, 2) }}
+                            </span>
+                        </p>
+
+                        {{-- 3. GASTOS (NUEVO) --}}
+                        <p class="d-flex justify-content-between mb-1 text-danger">
+                            <span>- Salidas/Gastos:</span>
+                            <span class="fw-bold">
+                                -${{ number_format($totalGastos ?? 0, 2) }}
                             </span>
                         </p>
 
                         <hr>
+                        
+                        {{-- 4. TOTAL ESTIMADO --}}
                         <h5 class="mt-3">Saldo Actual Estimado:</h5>
                         <div class="display-5 fw-bold text-primary">
-                            ${{ number_format($cajaAbierta->saldo_inicial + ($ventasEfectivo ?? 0), 2) }}
+                            {{-- Variable $saldoActual calculada en el Controller --}}
+                            ${{ number_format($saldoActual ?? 0, 2) }}
                         </div>
-                        <small class="text-muted">(Saldo Inicial + Ventas Efectivo)</small>
+                        <small class="text-muted">(Saldo Inicial + Ventas - Gastos)</small>
                     </div>
 
-                    {{-- ====================================================== --}}
-                    {{-- FOOTER DE BOTONES - *ACOMODADO* --}}
-                    {{-- ====================================================== --}}
+                    {{-- FOOTER DE BOTONES --}}
                     <div class="card-footer">
                         <div class="d-flex flex-column flex-md-row justify-content-between align-items-stretch gap-3">
 
@@ -105,7 +117,7 @@
                                 <div class="btn-group w-100 w-md-auto">
                                     <button type="button" class="btn btn-success btn-lg dropdown-toggle w-100"
                                             data-bs-toggle="dropdown">
-                                        <i class="fas fa-file-excel me-2"></i> Exportar Reporte
+                                            <i class="fas fa-file-excel me-2"></i> Exportar Reporte
                                     </button>
                                     <ul class="dropdown-menu w-100">
                                         <li>
@@ -129,7 +141,7 @@
                                     @csrf
                                     <button type="button" id="btn-cerrar-caja"
                                             class="btn btn-danger btn-lg w-100">
-                                        <i class="fas fa-lock me-2"></i> Cerrar Caja
+                                            <i class="fas fa-lock me-2"></i> Cerrar Caja
                                     </button>
                                 </form>
                             @endif
@@ -140,18 +152,23 @@
                 </div>
             </div>
 
-            {{-- Ventas --}}
+            {{-- Columna Derecha: Tablas --}}
             <div class="col-md-7 mb-4">
-                <div class="card shadow-lg h-100">
+                
+                {{-- 1. TABLA VENTAS --}}
+                <div class="card shadow-lg h-100 mb-4"> {{-- Agregué mb-4 para espacio --}}
                     <div class="card-header bg-info text-white">
                         <h4 class="mb-0"><i class="fas fa-shopping-cart me-2"></i> Ventas del Turno</h4>
                     </div>
 
                     <div class="card-body p-0">
-                        @if($ventasDelTurno->isEmpty())
+                        {{-- Ajuste de variable: soporte para $ventasDelTurno (tu codigo viejo) o $ventas (mi codigo nuevo) --}}
+                        @php $listaVentas = $ventasDelTurno ?? $ventas ?? collect([]); @endphp
+                        
+                        @if($listaVentas->isEmpty())
                             <p class="text-center p-3">No hay ventas registradas en este turno.</p>
                         @else
-                            <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
                                 <table class="table table-sm table-striped mb-0">
                                     <thead>
                                         <tr>
@@ -163,7 +180,7 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @foreach($ventasDelTurno as $venta)
+                                        @foreach($listaVentas as $venta)
                                             <tr>
                                                 <td>{{ \Carbon\Carbon::parse($venta->fecha_hora)->format('d/m/y') }}</td>
                                                 <td>
@@ -174,7 +191,13 @@
                                                     </ul>
                                                 </td>
                                                 <td>${{ number_format($venta->total, 2) }}</td>
-                                                <td>{{ ucfirst($venta->metodo_pago) }}</td>
+                                                <td>
+                                                    @if($venta->metodo_pago == 'efectivo')
+                                                        <span class="badge bg-success">Efectivo</span>
+                                                    @else
+                                                        <span class="badge bg-secondary">{{ ucfirst($venta->metodo_pago) }}</span>
+                                                    @endif
+                                                </td>
                                                 <td>
                                                     <button class="btn btn-sm btn-outline-primary"
                                                             onclick="imprimirTicket({{ $venta->id }})">
@@ -188,11 +211,46 @@
                             </div>
                         @endif
                     </div>
-
                 </div>
-            </div>
 
-        </div>
+                {{-- 2. TABLA GASTOS (NUEVO) --}}
+                <div class="card shadow-lg h-100">
+                    <div class="card-header bg-danger text-white">
+                        <h4 class="mb-0"><i class="fas fa-money-bill-wave me-2"></i> Gastos/Salidas</h4>
+                    </div>
+
+                    <div class="card-body p-0">
+                        @if(!isset($gastos) || $gastos->isEmpty())
+                            <p class="text-center p-3">No hay gastos registrados en este turno.</p>
+                        @else
+                            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                                <table class="table table-sm table-striped mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th class="ps-3">Hora</th>
+                                            <th>Descripción</th>
+                                            <th class="text-end pe-3">Monto</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($gastos as $gasto)
+                                            <tr>
+                                                <td class="ps-3">{{ $gasto->created_at->format('H:i') }}</td>
+                                                <td>{{ $gasto->descripcion }}</td>
+                                                <td class="text-end text-danger fw-bold pe-3">
+                                                    - ${{ number_format($gasto->monto, 2) }}
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        @endif
+                    </div>
+                </div> 
+                {{-- FIN TABLA GASTOS --}}
+
+            </div> </div>
     @endif
 </div>
 

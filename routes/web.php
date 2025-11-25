@@ -246,4 +246,8 @@ Route::middleware(['auth', 'permiso:cargos,mostrar'])->group(function () {
     Route::get('/historial-cajas/{caja}', [HistorialCajasController::class, 'show'])->name('historial_cajas.show');
 
 });
+
+Route::resource('compras', CompraController::class);
+Route::get('/historial-cajas/{id}', [HistorialCajaController::class, 'show'])->name('historial_cajas.show');
+
 });

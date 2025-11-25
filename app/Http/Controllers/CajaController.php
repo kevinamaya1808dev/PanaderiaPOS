@@ -15,61 +15,45 @@ class CajaController extends Controller
      * Muestra el estado actual de la caja.
      */
     public function index()
-    {
-        // Obtener la caja abierta por el usuario actual
-        $cajaAbierta = Caja::with('user')
-            ->where('user_id', Auth::id())
-            ->where('estado', 'abierta')
-            ->first();
+{
+    // 1. Buscamos si el usuario tiene una CAJA ABIERTA
+    $caja = Caja::where('user_id', Auth::id())
+                ->where('estado', 'abierta')
+                ->first();
 
-        $movimientos = collect();
-        $saldoActual = 0;
-        $ventasEfectivo = 0; // <-- NUEVO: Inicializar variable para ventas en efectivo
-        $saldoMovimientos = 0; // <-- AÑADIDO: Inicializar saldoMovimientos
-        $ventasDelTurno = collect();
-
-        if ($cajaAbierta) {
-            // Obtener sus movimientos manuales
-            $movimientos = MovimientoCaja::where('caja_id', $cajaAbierta->id)
-                ->with('user') // <-- AÑADIDO: Cargar usuario aquí
-                ->orderBy('created_at', 'desc')
-                ->get();
-
-            // Calcular el saldo de movimientos manuales
-            $saldoMovimientos = $movimientos->sum(function ($mov) {
-                // Asumiendo que 'ingreso' suma y 'egreso' (u otro tipo) resta
-                return $mov->tipo === 'ingreso' ? $mov->monto : -$mov->monto;
-            });
-            
-            // <-- NUEVO: Calcular Ventas en Efectivo desde la apertura de esta caja -->
-            $ventasEfectivo = Venta::where('user_id', Auth::id()) // Ventas del usuario actual
-                                    ->where('metodo_pago', 'efectivo') // SOLO EFECTIVO
-                                    ->where('fecha_hora', '>=', $cajaAbierta->fecha_hora_apertura) // Desde que abrió caja
-                                    // ->where('caja_id', $cajaAbierta->id) // Si tuvieras caja_id en Ventas, sería más preciso
-                                    ->sum('total');
-            
-
-            //Obtener la LISTA de todas las ventas del turno
-            $ventasDelTurno = Venta::where('user_id', Auth::id())
-                                ->where('fecha_hora', '>=', $cajaAbierta->fecha_hora_apertura)
-                                ->with('detalles.producto') // ¡Carga los productos de cada venta!
-                                ->orderBy('fecha_hora', 'desc') // Mostrar la más reciente primero
-                                ->get();
-
-            // <-- MODIFICADO: Añadir ventas en efectivo al saldo actual -->
-            $saldoActual = $cajaAbierta->saldo_inicial + $saldoMovimientos + $ventasEfectivo;
-        }
-
-        // <-- MODIFICADO: Pasar $ventasEfectivo y $saldoMovimientos a la vista -->
-        return view('cajas.index', compact(
-            'cajaAbierta', 
-            'movimientos', 
-            'saldoActual', 
-            'ventasEfectivo', 
-            'saldoMovimientos', // Pasar también el total de movimientos
-            'ventasDelTurno'
-        ));
+    if (!$caja) {
+        // Reutilizamos el index, pero le decimos que NO hay caja abierta
+        return view('cajas.index', ['cajaAbierta' => null]); 
     }
+
+    // 2. Traemos las VENTAS por FECHA (ya que no tienes caja_id)
+    // Buscamos ventas hechas DESPUÉS de la hora de apertura
+    $ventas = Venta::where('created_at', '>=', $caja->fecha_hora_apertura)
+                   ->orderBy('created_at', 'desc')
+                   ->get();
+
+    // 3. Traemos los GASTOS de la misma forma (por fecha/hora)
+    $gastos = MovimientoCaja::where('caja_id', $caja->id)
+                            ->where('tipo', 'egreso')
+                            ->orderBy('created_at', 'desc')
+                            ->get();
+
+    // 4. Cálculos
+    $totalVentasEfectivo = $ventas->where('metodo_pago', 'efectivo')->sum('total');
+    $totalGastos = $gastos->sum('monto'); 
+
+    // Saldo = Inicial + Ventas - Gastos
+    $saldoActual = $caja->saldo_inicial + $totalVentasEfectivo - $totalGastos;
+
+   return view('cajas.index', [
+        'cajaAbierta' => $caja,  
+        'ventas' => $ventas,
+        'gastos' => $gastos,
+        'saldoActual' => $saldoActual,
+        'totalGastos' => $totalGastos,
+        'ventasEfectivo' => $totalVentasEfectivo 
+    ]);
+}
 
     /**
      * Abre una nueva caja (Sin cambios necesarios aquí).

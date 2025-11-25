@@ -9,18 +9,26 @@ class Compra extends Model
 {
     use HasFactory;
 
-    protected $table = 'compras';
-
     protected $fillable = [
         'proveedor_id',
+        'user_id',       
+        'created_at', 
         'descripcion',
+        'concepto',
         'metodo_pago',
         'total',
+        'responsable_nombre'
     ];
-    
-    // Una compra pertenece a un proveedor
+
+    // Relación con Proveedor
     public function proveedor()
     {
-        return $this->belongsTo(Proveedor::class, 'proveedor_id');
+        return $this->belongsTo(Proveedor::class);
+    }
+
+    // Relación con Usuario (El Responsable)
+    public function user()
+    {
+        return $this->belongsTo(User::class);
     }
 }
