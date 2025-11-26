@@ -17,6 +17,9 @@ use App\Http\Controllers\CompraController;
 use App\Http\Controllers\VentaController;
 use App\Http\Controllers\CobrarVentaController;
 use App\Http\Controllers\HistorialCajasController;
+use App\Http\Controllers\NominaController;
+
+
 
 /*
 |--------------------------------------------------------------------------
@@ -249,5 +252,19 @@ Route::middleware(['auth', 'permiso:cargos,mostrar'])->group(function () {
 
 Route::resource('compras', CompraController::class);
 Route::get('/historial-cajas/{id}', [HistorialCajaController::class, 'show'])->name('historial_cajas.show');
+
+// Mostrar nómina del empleado
+Route::get('empleados/{id}/nomina', [NominaController::class, 'index'])
+    ->name('nomina.index');
+
+// Guardar pago de nómina del empleado
+Route::post('empleados/{id}/nomina', [NominaController::class, 'store'])
+    ->name('nomina.store');
+
+    // Nómina por empleado
+Route::get('empleados/{id}/nomina', [NominaController::class, 'index'])->name('nomina.index');
+Route::post('empleados/{id}/nomina', [NominaController::class, 'store'])->name('nomina.store');
+
+Route::post('/empleados/{id}/nomina/liquidar', [App\Http\Controllers\NominaController::class, 'liquidar'])->name('nomina.liquidar');
 
 });

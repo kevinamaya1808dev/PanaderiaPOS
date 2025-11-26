@@ -24,4 +24,10 @@ class Empleado extends Model
         // El empleado pertenece a un usuario (relación 1:1)
         return $this->belongsTo(User::class, 'idUserFK');
     }
+
+    public function pagos()
+    {
+    return $this->hasMany(PagoNomina::class);
+    }
+
 }

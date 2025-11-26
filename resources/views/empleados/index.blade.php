@@ -62,6 +62,18 @@
                                 <i class="fas fa-trash me-1"></i> Eliminar
                             </button>
                         @endif
+                        {{-- Botón de Nómina --}}
+{{-- IMPORTANTE: Verificamos si el usuario tiene un empleado asociado --}}
+@if($user->empleado) 
+    <a href="{{ route('nomina.index', $user->empleado->idEmp) }}" 
+       class="btn btn-sm btn-info me-1" 
+       title="Ver Nómina">
+       <i class="fas fa-file-invoice-dollar me-1"></i> Nómina
+    </a>
+@else
+    {{-- Opcional: Mostrar algo si no es empleado (o dejar vacío) --}}
+    <span class="badge bg-secondary">Sin perfil emp.</span>
+@endif
                     </td>
                 </tr>
                 @empty
