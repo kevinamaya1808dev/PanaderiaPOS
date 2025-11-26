@@ -16,6 +16,8 @@ class Empleado extends Model
         'idUserFK', // CRÍTICO: Asegurarse de que esta clave foránea esté aquí
         'telefono',
         'direccion',
+        'fecha_contratacion',
+        'requiere_acceso',
     ];
     
     // Opcional: Define la relación inversa con User

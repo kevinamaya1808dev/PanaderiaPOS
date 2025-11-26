@@ -14,13 +14,9 @@
             <form action="{{ route('empleados.store') }}" method="POST" autocomplete="off" id="formEmpleado">
                 @csrf
 
-                {{-- SECCIÓN DATOS DE ACCESO --}}
-                <h6 class="text-muted">Datos de Acceso</h6>
-                <hr class="mt-1 mb-3 border-secondary">
-
-                {{-- NOMBRE DEL USUARIO --}}
-                <div class="mb-3">
-                    <label for="name" class="form-label">Nombre del Usuario</label>
+                {{-- NOMBRE DEL EMPLEADO (Siempre visible) --}}
+                <div class="mb-4">
+                    <label for="name" class="form-label fw-bold">Nombre Completo</label>
                     <div class="input-group">
                         <span class="input-group-text"><i class="fas fa-user fa-fw"></i></span>
                         <input type="text" 
@@ -35,69 +31,89 @@
                     @error('name') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                 </div>
 
-                {{-- EMAIL (USUARIO) - ARREGLADO CON CAMPO OCULTO --}}
-                <div class="mb-3">
-                    <label for="email_prefix" class="form-label">Usuario de Acceso</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="fas fa-envelope fa-fw"></i></span>
+                {{-- INTERRUPTOR DE ACCESO AL SISTEMA --}}
+                <div class="card bg-light mb-4 border-0">
+                    <div class="card-body py-3">
+                        <div class="form-check form-switch">
+                            {{-- Si hubo error y estaba marcado, mantenerlo marcado con old() --}}
+                            <input class="form-check-input" type="checkbox" id="checkAcceso" name="requiere_acceso" value="1" {{ old('requiere_acceso') ? 'checked' : '' }}>
+                            <label class="form-check-label fw-bold text-primary" for="checkAcceso">
+                                <i class="fas fa-key me-1"></i> ¿Dar acceso al sistema?
+                            </label>
+                            <div class="form-text small text-muted">
+                                Marca esto <strong>SOLO</strong> si el empleado necesita iniciar sesión.
+                                <br>Para empleados sin acceso, déjalo desmarcado.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- ÁREA DE LOGIN (Se oculta/muestra con JS) --}}
+                <div id="areaLogin" style="display: none;">
+                    <h6 class="text-muted">Credenciales de Acceso</h6>
+                    <hr class="mt-1 mb-3 border-secondary">
+
+                    {{-- EMAIL (USUARIO) --}}
+                    <div class="mb-3">
+                        <label for="email_prefix" class="form-label">Usuario de Acceso</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-envelope fa-fw"></i></span>
+                            
+                            {{-- Input visual --}}
+                            <input type="text" 
+                                   class="form-control @error('email') is-invalid @enderror" 
+                                   id="email_prefix" 
+                                   name="email_prefix" 
+                                   value="{{ old('email_prefix') }}" 
+                                   placeholder="ej. juan.perez"
+                                   autocomplete="off">
+                            
+                            {{-- Parte fija --}}
+                            <span class="input-group-text bg-light text-secondary fw-bold">@panaderia.com</span>
+                        </div>
+
+                        {{-- Input OCULTO real --}}
+                        <input type="hidden" name="email" id="hidden_email" value="{{ old('email') }}">
+
+                        <small class="text-muted" style="font-size: 0.8rem;">El dominio se agrega automáticamente.</small>
                         
-                        {{-- 1. Input visual (solo el nombre) --}}
-                        <input type="text" 
-                               class="form-control @error('email') is-invalid @enderror" 
-                               id="email_prefix" 
-                               name="email_prefix" 
-                               value="{{ old('email_prefix') }}" 
-                               placeholder="ej. juan.perez"
-                               autocomplete="off" 
-                               required>
-                        
-                        {{-- Parte fija --}}
-                        <span class="input-group-text bg-light text-secondary fw-bold">@panaderia.com</span>
+                        @error('email') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+                        @error('email_prefix') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                     </div>
 
-                    {{-- 2. Input OCULTO que sí se llama 'email' (Este es el que lee Laravel) --}}
-                    <input type="hidden" name="email" id="hidden_email" value="{{ old('email') }}">
-
-                    <small class="text-muted" style="font-size: 0.8rem;">Ingresa solo el usuario, el dominio se agrega automáticamente.</small>
-                    
-                    {{-- Mostramos errores tanto de email como del prefijo por si acaso --}}
-                    @error('email') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
-                    @error('email_prefix') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
-                </div>
-
-                {{-- CONTRASEÑA --}}
-                <div class="mb-3">
-                    <label for="password" class="form-label">Contraseña</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="fas fa-lock fa-fw"></i></span>
-                        <input type="password" 
-                               class="form-control @error('password') is-invalid @enderror" 
-                               id="password" 
-                               name="password" 
-                               placeholder="Mínimo 8 caracteres"
-                               autocomplete="new-password" 
-                               required>
+                    {{-- CONTRASEÑA --}}
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Contraseña</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-lock fa-fw"></i></span>
+                            <input type="password" 
+                                   class="form-control @error('password') is-invalid @enderror" 
+                                   id="password" 
+                                   name="password" 
+                                   placeholder="Mínimo 8 caracteres"
+                                   autocomplete="new-password">
+                        </div>
+                        @error('password') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                     </div>
-                    @error('password') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
-                </div>
 
-                {{-- CONFIRMAR CONTRASEÑA --}}
-                <div class="mb-3">
-                    <label for="password_confirmation" class="form-label">Confirmar Contraseña</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="fas fa-lock fa-fw"></i></span>
-                        <input type="password" 
-                               class="form-control" 
-                               id="password_confirmation" 
-                               name="password_confirmation" 
-                               autocomplete="new-password" 
-                               required>
+                    {{-- CONFIRMAR CONTRASEÑA --}}
+                    <div class="mb-4">
+                        <label for="password_confirmation" class="form-label">Confirmar Contraseña</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-lock fa-fw"></i></span>
+                            <input type="password" 
+                                   class="form-control" 
+                                   id="password_confirmation" 
+                                   name="password_confirmation" 
+                                   autocomplete="new-password">
+                        </div>
                     </div>
                 </div>
+                {{-- FIN ÁREA LOGIN --}}
 
-                {{-- CARGO --}}
+                {{-- CARGO (Siempre visible, todos tienen puesto) --}}
                 <div class="mb-3">
-                    <label for="cargo_id" class="form-label">Cargo</label>
+                    <label for="cargo_id" class="form-label">Cargo / Puesto</label>
                     <div class="input-group">
                         <span class="input-group-text"><i class="fas fa-user-tag fa-fw"></i></span>
                         <select class="form-select @error('cargo_id') is-invalid @enderror" id="cargo_id" name="cargo_id" required>
@@ -164,28 +180,63 @@
     </div>
 </div>
 
-{{-- SCRIPT PARA UNIR EL CORREO AUTOMÁTICAMENTE --}}
+{{-- SCRIPT INTEGRADO: EMAIL + INTERRUPTOR --}}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+        // Elementos del DOM
+        const checkAcceso = document.getElementById('checkAcceso');
+        const areaLogin = document.getElementById('areaLogin');
+        
+        // Inputs que deben ser obligatorios SOLO si hay acceso
         const emailPrefixInput = document.getElementById('email_prefix');
+        const passwordInput = document.getElementById('password');
+        const passwordConfInput = document.getElementById('password_confirmation');
+        
+        // Campo oculto de email
         const hiddenEmailInput = document.getElementById('hidden_email');
         const dominio = '@panaderia.com';
 
-        // Función que actualiza el campo oculto
+        // 1. FUNCIÓN: Actualizar email completo
         function updateFullEmail() {
             if(emailPrefixInput.value) {
-                // Quita espacios y une con el dominio
                 hiddenEmailInput.value = emailPrefixInput.value.trim() + dominio;
             } else {
                 hiddenEmailInput.value = '';
             }
         }
 
-        // Escuchar cuando el usuario escribe
-        emailPrefixInput.addEventListener('input', updateFullEmail);
+        // 2. FUNCIÓN: Mostrar/Ocultar campos de login
+        function toggleLoginFields() {
+            if (checkAcceso.checked) {
+                // MOSTRAR
+                areaLogin.style.display = 'block';
+                // Hacer obligatorios
+                emailPrefixInput.required = true;
+                passwordInput.required = true;
+                passwordConfInput.required = true;
+            } else {
+                // OCULTAR
+                areaLogin.style.display = 'none';
+                // Quitar obligatoriedad
+                emailPrefixInput.required = false;
+                passwordInput.required = false;
+                passwordConfInput.required = false;
+                
+                // Opcional: Limpiar valores si se desmarca para no enviar basura
+                emailPrefixInput.value = '';
+                passwordInput.value = '';
+                passwordConfInput.value = '';
+                hiddenEmailInput.value = '';
+            }
+        }
 
-        // Ejecutar al cargar (por si hay datos "old" tras un error)
+        // Listeners
+        emailPrefixInput.addEventListener('input', updateFullEmail);
+        checkAcceso.addEventListener('change', toggleLoginFields);
+
+        // Ejecutar al inicio (para cargar estado 'old' o limpiar)
         updateFullEmail();
+        toggleLoginFields();
     });
 </script>
 @endsection

@@ -33,43 +33,67 @@ class EmpleadoController extends Controller
 
     /**
      * Almacena un nuevo empleado y usuario en la base de datos.
+     * MODIFICADO: Ahora soporta empleados SIN acceso al sistema.
      */
     public function store(Request $request)
     {
-        $request->validate([
+        // 1. Definir reglas básicas (aplican para TODOS)
+        $rules = [
             'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8|confirmed',
             'cargo_id' => 'required|exists:cargos,id',
             'telefono' => 'nullable|string|max:255',
             'direccion' => 'nullable|string|max:255',
-        ]);
+        ];
+
+        // 2. Validación Condicional: Solo pedimos credenciales si marcó el checkbox
+        if ($request->has('requiere_acceso')) {
+            $rules['email'] = 'required|string|email|max:255|unique:users';
+            $rules['password'] = 'required|string|min:8|confirmed';
+        }
+
+        $request->validate($rules);
 
         DB::beginTransaction();
 
         try {
-            // 1. Crear el registro en la tabla 'users'
-            $user = User::create([
+            // 3. Preparar datos del Usuario
+            $userData = [
                 'name' => $request->name,
-                'email' => $request->email,
-                'password' => Hash::make($request->password),
                 'cargo_id' => $request->cargo_id,
-            ]);
+            ];
 
-            // 2. Crear el registro en la tabla 'empleados' usando el ID del usuario recién creado
+            // Si requiere acceso, guardamos email y pass encriptada
+            if ($request->has('requiere_acceso')) {
+                $userData['email'] = $request->email;
+                $userData['password'] = Hash::make($request->password);
+            } else {
+                // Si NO requiere acceso, dejamos estos campos explícitamente nulos
+                $userData['email'] = null;
+                $userData['password'] = null;
+            }
+
+            // Crear el registro en 'users'
+            $user = User::create($userData);
+
+            // 4. Crear el registro en 'empleados'
             Empleado::create([
-                'idUserFK' => $user->id, // ESTO AHORA FUNCIONA GRACIAS A LA CORRECCIÓN EN EL MODELO EMPLEADO
+                'idUserFK' => $user->id,
                 'telefono' => $request->telefono,
                 'direccion' => $request->direccion,
+                // Guardamos el estado del acceso (1 o 0)
+                'requiere_acceso' => $request->has('requiere_acceso') ? 1 : 0,
             ]);
 
             DB::commit();
 
-            return redirect()->route('empleados.index')->with('success', 'Empleado creado exitosamente y usuario activado.');
+            $mensaje = $request->has('requiere_acceso') 
+                ? 'Empleado con acceso al sistema creado exitosamente.' 
+                : 'Empleado registrado correctamente (Sin credenciales de acceso).';
+
+            return redirect()->route('empleados.index')->with('success', $mensaje);
 
         } catch (\Exception $e) {
             DB::rollBack();
-            // Retornar un error detallado para el debugging
             return redirect()->back()->withInput()->with('error', 'Ocurrió un error al crear el empleado: ' . $e->getMessage());
         }
     }
@@ -98,9 +122,13 @@ class EmpleadoController extends Controller
      */
     public function update(Request $request, User $empleado)
     {
+        // TODO: Si deseas implementar la lógica de acceso también en la edición,
+        // deberás modificar este método similar al store.
+        
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => ['required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($empleado->id)],
+            // Validamos email solo si se envía o si el usuario ya tenía uno
+            'email' => ['nullable', 'string', 'email', 'max:255', Rule::unique('users')->ignore($empleado->id)],
             'password' => 'nullable|string|min:8|confirmed',
             'cargo_id' => 'required|exists:cargos,id',
             'telefono' => 'nullable|string|max:255',
@@ -112,9 +140,13 @@ class EmpleadoController extends Controller
         try {
             $userData = [
                 'name' => $request->name,
-                'email' => $request->email,
                 'cargo_id' => $request->cargo_id,
             ];
+
+            // Solo actualizamos email si viene en el request (o mantenemos el existente)
+            if ($request->filled('email')) {
+                $userData['email'] = $request->email;
+            }
 
             if ($request->filled('password')) {
                 $userData['password'] = Hash::make($request->password);
@@ -122,15 +154,13 @@ class EmpleadoController extends Controller
 
             $empleado->update($userData);
 
-            // Asegurar que el registro de empleado exista antes de actualizarlo
             if ($empleado->empleado) {
                  $empleado->empleado->update([
                     'telefono' => $request->telefono,
                     'direccion' => $request->direccion,
                 ]);
             }
-           
-
+            
             DB::commit();
 
             return redirect()->route('empleados.index')->with('success', 'Empleado actualizado exitosamente.');
@@ -156,7 +186,7 @@ class EmpleadoController extends Controller
         
         DB::beginTransaction();
         try {
-            $empleado->delete(); // Gracias a ON DELETE CASCADE en la BD, Empleado se borra automáticamente
+            $empleado->delete(); 
             DB::commit();
 
             return redirect()->route('empleados.index')->with('success', 'Empleado y usuario eliminados exitosamente.');
