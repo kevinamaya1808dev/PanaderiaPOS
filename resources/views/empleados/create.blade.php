@@ -41,7 +41,7 @@
                                 <i class="fas fa-key me-1"></i> ¿Dar acceso al sistema?
                             </label>
                             <div class="form-text small text-muted">
-                                Marca esto <strong>SOLO</strong> si el empleado necesita iniciar sesión.
+                                Marca esto <strong>SOLO</strong> si el empleado necesita acceso al sistema.
                                 <br>Para empleados sin acceso, déjalo desmarcado.
                             </div>
                         </div>
