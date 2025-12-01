@@ -18,6 +18,8 @@ use App\Http\Controllers\VentaController;
 use App\Http\Controllers\CobrarVentaController;
 use App\Http\Controllers\HistorialCajasController;
 use App\Http\Controllers\NominaController;
+use App\Http\Controllers\PedidoController;
+
 
 
 
@@ -270,4 +272,22 @@ Route::post('/empleados/{id}/nomina/liquidar', [App\Http\Controllers\NominaContr
 
 Route::resource('pedidos', App\Http\Controllers\PedidoController::class);
 Route::post('pedidos/{id}/entregar', [App\Http\Controllers\PedidoController::class, 'entregar'])->name('pedidos.entregar');
+
+// Ruta para procesar la entrega y el cobro
+Route::post('/pedidos/entregar', [App\Http\Controllers\PedidoController::class, 'entregar'])->name('pedidos.cobrar');
+Route::get('/pedidos/ticket/{id}', [App\Http\Controllers\PedidoController::class, 'ticket'])->name('pedidos.ticket');
+
+// 1. Ruta para ver el formulario de edición
+Route::get('/pedidos/{id}/editar', [PedidoController::class, 'edit'])->name('pedidos.edit');
+
+// 2. Ruta para guardar los cambios (PUT)
+Route::put('/pedidos/{id}', [PedidoController::class, 'update'])->name('pedidos.update');
+
+// 3. Ruta para cancelar el pedido (DELETE)
+Route::delete('/pedidos/{id}/cancelar', [PedidoController::class, 'cancelar'])->name('pedidos.cancelar');
+
+
 });
+
+
+
