@@ -18,18 +18,6 @@
                         <i class="fas fa-user me-2"></i> Datos del Cliente
                     </div>
                     <div class="card-body">
-                        {{-- Selector de Cliente Registrado --}}
-                        <div class="mb-3">
-                            <label class="form-label">Cliente (Opcional)</label>
-                            <select name="cliente_id" id="cliente_select" class="form-select">
-                                <option value="">-- Cliente Casual / Mostrador --</option>
-                                @foreach($clientes as $cliente)
-                                    <option value="{{ $cliente->idCli }}" data-nombre="{{ $cliente->nombre }}" data-tel="{{ $cliente->telefono }}">
-                                        {{ $cliente->nombre }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
 
                         {{-- Campos Manuales (se llenan solos si eliges cliente) --}}
                         <div class="mb-3">
