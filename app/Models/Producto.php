@@ -20,8 +20,8 @@ class Producto extends Model
         'nombre',
         'descripcion',
         'precio',
-        'imagen',
-        'costo'
+        'imagen'
+        // 'costo' <- ELIMINADO
     ];
 
     // Un producto pertenece a una categoría

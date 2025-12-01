@@ -45,7 +45,7 @@ class ProductoController extends Controller
             ],
             'descripcion' => 'nullable|string',
             'precio' => 'required|numeric|min:0.01',
-            'costo' => 'required|numeric|min:0', // Validamos Costo
+            // 'costo' -> ELIMINADO DE LA VALIDACIÓN
             'imagen' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
             'stock_inicial' => 'required|integer|min:0',
             'cantidad_minima' => 'required|integer|min:0',
@@ -53,7 +53,8 @@ class ProductoController extends Controller
 
         DB::beginTransaction();
         try {
-            $datosProducto = $request->only(['categoria_id', 'nombre', 'descripcion', 'precio', 'costo']);
+            // ELIMINADO 'costo' del array below
+            $datosProducto = $request->only(['categoria_id', 'nombre', 'descripcion', 'precio']);
             
             if ($request->hasFile('imagen')) {
                 $path = $request->file('imagen')->store('productos', 'public');
@@ -108,7 +109,7 @@ class ProductoController extends Controller
 
             'descripcion' => 'nullable|string',
             'precio' => 'required|numeric|min:0.01',
-            'costo' => 'required|numeric|min:0', // Validamos Costo
+            // 'costo' -> ELIMINADO DE LA VALIDACIÓN
 
             'imagen' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
             'cantidad_minima' => 'required|integer|min:0', 
@@ -116,7 +117,8 @@ class ProductoController extends Controller
 
         DB::beginTransaction();
         try {
-            $datosProducto = $request->only(['categoria_id', 'nombre', 'descripcion', 'precio', 'costo']);
+            // ELIMINADO 'costo' del array below
+            $datosProducto = $request->only(['categoria_id', 'nombre', 'descripcion', 'precio']);
             
             if ($request->hasFile('imagen')) {
                 if ($producto->imagen && Storage::disk('public')->exists($producto->imagen)) {

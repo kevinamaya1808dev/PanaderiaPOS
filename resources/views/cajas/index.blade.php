@@ -56,7 +56,7 @@
     {{-- ========================================================== --}}
     @else
         
-        {{-- FILA SUPERIOR: INFORMACIÓN Y VENTAS --}}
+        {{-- FILA SUPERIOR: INFORMACIÓN Y VENTAS/APARTADOS --}}
         <div class="row mb-4">
 
             {{-- COLUMNA IZQUIERDA: Panel de Información --}}
@@ -67,9 +67,10 @@
                     </div>
 
                     <div class="card-body">
+                        {{-- ... (Info del cajero) ... --}}
                         <p class="mb-1"><strong>ID Caja:</strong> {{ $cajaAbierta->id }}</p>
                         <p class="mb-1"><strong>Cajero:</strong> {{ $cajaAbierta->user->name ?? 'N/A' }}</p>
-                        {{-- Aquí dejamos fecha y hora porque es la apertura del turno, útil para saber cuándo inició --}}
+                        {{-- Aquí dejamos la hora porque es útil saber a qué hora abrió --}}
                         <p class="mb-1"><strong>Apertura:</strong> {{ $cajaAbierta->fecha_hora_apertura->format('d/m/Y H:i') }}</p>
                         <hr>
 
@@ -85,13 +86,21 @@
 
                         {{-- 2. VENTAS --}}
                         <p class="d-flex justify-content-between mb-1 text-success">
-                            <span>+ Ventas en Efectivo:</span>
+                            <span>+ Ventas (Efectivo):</span>
                             <span class="fw-bold">
-                                +${{ number_format($ventasEfectivo ?? $totalVentasEfectivo ?? 0, 2) }}
+                                +${{ number_format($ventasEfectivo ?? 0, 2) }}
                             </span>
                         </p>
 
-                        {{-- 3. GASTOS --}}
+                        {{-- 3. ANTICIPOS DE APARTADOS --}}
+                        <p class="d-flex justify-content-between mb-1 text-success">
+                            <span>+ Anticipos (Efectivo):</span>
+                            <span class="fw-bold">
+                                +${{ number_format($anticiposEfectivo ?? 0, 2) }}
+                            </span>
+                        </p>
+
+                        {{-- 4. GASTOS --}}
                         <p class="d-flex justify-content-between mb-1 text-danger">
                             <span>- Salidas/Gastos:</span>
                             <span class="fw-bold">
@@ -101,19 +110,18 @@
 
                         <hr>
                         
-                        {{-- 4. TOTAL ESTIMADO --}}
+                        {{-- 5. TOTAL ESTIMADO --}}
                         <h5 class="mt-3">Saldo Actual Estimado:</h5>
                         <div class="display-5 fw-bold text-primary">
                             ${{ number_format($saldoActual ?? 0, 2) }}
                         </div>
-                        <small class="text-muted">(Saldo Inicial + Ventas - Gastos)</small>
+                        <small class="text-muted">(Inicial + Ventas + Anticipos - Gastos)</small>
                     </div>
 
                     {{-- FOOTER DE BOTONES --}}
                     <div class="card-footer">
                         <div class="d-grid gap-2">
-                            {{-- BOTÓN EXPORTAR --}}
-                            @if (Auth::user()->hasPermissionTo('cajas', 'mostrar'))
+                             @if (Auth::user()->hasPermissionTo('cajas', 'mostrar'))
                                 <div class="btn-group">
                                     <button type="button" class="btn btn-success dropdown-toggle" data-bs-toggle="dropdown">
                                             <i class="fas fa-file-excel me-2"></i> Exportar Reporte
@@ -125,7 +133,6 @@
                                 </div>
                             @endif
 
-                            {{-- BOTÓN CERRAR CAJA --}}
                             @if (Auth::user()->hasPermissionTo('cajas', 'eliminar'))
                                 <form id="form-cerrar-caja" action="{{ route('cajas.cerrar') }}" method="POST">
                                     @csrf
@@ -139,27 +146,24 @@
                 </div>
             </div>
 
-            {{-- COLUMNA DERECHA: TABLA VENTAS --}}
+            {{-- COLUMNA DERECHA: VENTAS Y ANTICIPOS --}}
             <div class="col-md-8">
-                <div class="card shadow-lg h-100">
+                
+                {{-- TABLA 1: VENTAS --}}
+                <div class="card shadow-lg mb-4">
                     <div class="card-header bg-info text-white">
                         <h4 class="mb-0"><i class="fas fa-shopping-cart me-2"></i> Ventas del Turno</h4>
                     </div>
-
                     <div class="card-body p-0">
-                        @php $listaVentas = $ventasDelTurno ?? $ventas ?? collect([]); @endphp
-                        
+                         @php $listaVentas = $ventasDelTurno ?? $ventas ?? collect([]); @endphp
                         @if($listaVentas->isEmpty())
-                            <div class="d-flex align-items-center justify-content-center h-100 p-5">
-                                <p class="text-muted mb-0">No hay ventas registradas en este turno.</p>
-                            </div>
+                            <div class="p-4 text-center text-muted">No hay ventas registradas.</div>
                         @else
-                            <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
-                                <table class="table table-striped table-hover mb-0 align-middle">
+                            <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                                <table class="table table-striped mb-0 align-middle">
                                     <thead class="table-light sticky-top">
                                         <tr>
                                             <th>Fecha</th>
-                                            <th>Productos</th>
                                             <th>Total</th>
                                             <th>Método</th>
                                             <th>Acción</th>
@@ -168,24 +172,15 @@
                                     <tbody>
                                         @foreach($listaVentas as $venta)
                                             <tr>
-                                                {{-- CAMBIO: Solo Fecha (d/m/Y) --}}
+                                                {{-- CAMBIO AQUI: Quitamos H:i para dejar solo fecha --}}
                                                 <td style="font-size: 0.9rem;">
                                                     {{ \Carbon\Carbon::parse($venta->fecha_hora)->format('d/m/Y') }}
                                                 </td>
-                                                <td>
-                                                    <small class="text-muted">
-                                                        @foreach($venta->detalles as $detalle)
-                                                            {{ $detalle->cantidad }}x {{ Str::limit($detalle->producto->nombre ?? '?', 15) }}<br>
-                                                        @endforeach
-                                                    </small>
-                                                </td>
                                                 <td class="fw-bold">${{ number_format($venta->total, 2) }}</td>
                                                 <td>
-                                                    @if($venta->metodo_pago == 'efectivo')
-                                                        <span class="badge bg-success">Efectivo</span>
-                                                    @else
-                                                        <span class="badge bg-secondary">{{ ucfirst($venta->metodo_pago) }}</span>
-                                                    @endif
+                                                    <span class="badge {{ $venta->metodo_pago == 'efectivo' ? 'bg-success' : 'bg-secondary' }}">
+                                                        {{ ucfirst($venta->metodo_pago) }}
+                                                    </span>
                                                 </td>
                                                 <td>
                                                     <button class="btn btn-sm btn-outline-primary" onclick="imprimirTicket({{ $venta->id }})">
@@ -200,11 +195,58 @@
                         @endif
                     </div>
                 </div>
+
+               {{-- TABLA 2: ANTICIPOS --}}
+                <div class="card shadow-lg">
+                    <div class="card-header bg-warning text-dark">
+                        <h4 class="mb-0"><i class="fas fa-clock me-2"></i> Anticipos / Apartados</h4>
+                    </div>
+                    <div class="card-body p-0">
+                        @if(!isset($anticipos) || $anticipos->isEmpty())
+                            <div class="p-4 text-center text-muted">No hay anticipos registrados en este turno.</div>
+                        @else
+                            <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                                <table class="table table-hover mb-0 align-middle">
+                                    <thead class="table-light sticky-top">
+                                        <tr>
+                                            <th>Fecha</th>
+                                            <th>Referencia</th> 
+                                            <th>Monto</th>
+                                            <th>Método</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($anticipos as $anticipo)
+                                            <tr>
+                                                {{-- CAMBIO AQUI: Quitamos H:i para dejar solo fecha --}}
+                                                <td>{{ $anticipo->created_at->format('d/m/Y') }}</td>
+                                                
+                                                <td>
+                                                    Pedido #{{ $anticipo->pedido_id }}
+                                                </td> 
+
+                                                <td class="fw-bold text-success">
+                                                    +${{ number_format($anticipo->monto, 2) }}
+                                                </td>
+                                                <td>
+                                                     <span class="badge {{ strtolower($anticipo->metodo_pago) == 'efectivo' ? 'bg-success' : 'bg-secondary' }}">
+                                                        {{ ucfirst($anticipo->metodo_pago) }}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+
             </div>
         </div> {{-- Fin Fila Superior --}}
 
 
-        {{-- FILA INFERIOR: GASTOS (ANCHO COMPLETO) --}}
+        {{-- FILA INFERIOR: GASTOS --}}
         <div class="row">
             <div class="col-12">
                 <div class="card shadow-lg">
@@ -229,7 +271,7 @@
                                     <tbody>
                                         @foreach($gastos as $gasto)
                                             <tr>
-                                                {{-- CAMBIO: Solo Fecha (d/m/Y) --}}
+                                                {{-- Aquí ya lo tenías bien (solo fecha) --}}
                                                 <td class="ps-4 fw-bold text-secondary">
                                                     {{ $gasto->created_at->format('d/m/Y') }}
                                                 </td>

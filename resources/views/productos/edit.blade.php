@@ -51,16 +51,12 @@
                                         <span class="input-group-text"><i class="fas fa-dollar-sign fa-fw"></i></span>
                                         <input type="number" class="form-control @error('precio') is-invalid @enderror" id="precio" name="precio" value="{{ old('precio', $producto->precio) }}" step="0.01" min="0" required>
                                     </div>
-                                    {{-- ¡AÑADE ESTE NUEVO BLOQUE DEBAJO! --}}
-                                <div class="mb-3">
-                                    <label for="costo" class="form-label">Precio de Costo ($)</label>
-                                    <input type="number" step="0.01" min="0" class="form-control" id="costo" name="costo" required placeholder="0.00">
-                                    <small class="form-text text-muted">Ingresa cuánto te cuesta producir o comprar este producto.</small>
-                                </div>
                                     @error('precio')
                                         <div class="invalid-feedback d-block">{{ $message }}</div>
                                     @enderror
                                 </div>
+
+                                {{-- *** BLOQUE COSTO ELIMINADO AQUÍ *** --}}
 
                                 <h6 class="text-muted mt-4">Inventario</h6>
                                 <hr class="mt-1 mb-3 border-secondary">
@@ -131,7 +127,7 @@
                                         <img id="image-preview" src="#" alt="Vista previa" 
                                              class="img-fluid rounded" 
                                              style="display: none; max-width: 100%; max-height: 200px; object-fit: contain; margin: 0 auto;"/>
-                                        
+                                    
                                         {{-- Placeholder/Imagen Actual --}}
                                         {{-- ESTE DIV AHORA TIENE 'd-flex' POR DEFECTO --}}
                                         <div id="image-current-placeholder" class="d-flex align-items-center justify-content-center" style="height: 200px;">

@@ -5,9 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Caja;
 use App\Models\Venta; 
 use App\Models\MovimientoCaja; 
+use App\Models\Anticipo; // Modelo correcto
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Barryvdh\DomPDF\Facade\Pdf; // Importamos PDF para que no falle
 
 class CajaController extends Controller
 {
@@ -16,47 +18,58 @@ class CajaController extends Controller
      */
     public function index()
     {
-        // 1. Buscamos si el usuario tiene una CAJA ABIERTA
+        // 1. Buscamos caja abierta
         $caja = Caja::where('user_id', Auth::id())
                 ->where('estado', 'abierta')
                 ->first();
 
         if (!$caja) {
-            // Reutilizamos el index, pero le decimos que NO hay caja abierta
             return view('cajas.index', ['cajaAbierta' => null]); 
         }
 
-        // 2. Traemos las VENTAS por FECHA (ya que no tienes caja_id)
-        // Buscamos ventas hechas DESPUÉS de la hora de apertura
+        // 2. Traemos las VENTAS
         $ventas = Venta::where('created_at', '>=', $caja->fecha_hora_apertura)
                     ->orderBy('created_at', 'desc')
                     ->get();
 
-        // 3. Traemos los GASTOS de la misma forma (por fecha/hora)
+        // 3. Traemos los GASTOS
         $gastos = MovimientoCaja::where('caja_id', $caja->id)
                             ->where('tipo', 'egreso')
                             ->orderBy('created_at', 'desc')
                             ->get();
 
-        // 4. Cálculos
+        // 4. Traemos los ANTICIPOS
+        $anticipos = Anticipo::where('created_at', '>=', $caja->fecha_hora_apertura)
+                            ->orderBy('created_at', 'desc')
+                            ->get();
+
+        // 5. Cálculos
         $totalVentasEfectivo = $ventas->where('metodo_pago', 'efectivo')->sum('total');
+        
+        // Sumar columna 'monto' solo si es efectivo
+        $totalAnticiposEfectivo = $anticipos->filter(function ($anticipo) {
+            return strtolower($anticipo->metodo_pago) === 'efectivo';
+        })->sum('monto'); 
+        
         $totalGastos = $gastos->sum('monto'); 
 
-        // Saldo = Inicial + Ventas - Gastos
-        $saldoActual = $caja->saldo_inicial + $totalVentasEfectivo - $totalGastos;
+        // Saldo = Inicial + Ventas + Anticipos - Gastos
+        $saldoActual = $caja->saldo_inicial + $totalVentasEfectivo + $totalAnticiposEfectivo - $totalGastos;
 
        return view('cajas.index', [
             'cajaAbierta' => $caja,  
             'ventas' => $ventas,
             'gastos' => $gastos,
+            'anticipos' => $anticipos,
             'saldoActual' => $saldoActual,
             'totalGastos' => $totalGastos,
-            'ventasEfectivo' => $totalVentasEfectivo 
+            'ventasEfectivo' => $totalVentasEfectivo,
+            'anticiposEfectivo' => $totalAnticiposEfectivo 
         ]);
     }
 
     /**
-     * Abre una nueva caja (Sin cambios necesarios aquí).
+     * Abre una nueva caja.
      */
     public function abrirCaja(Request $request)
     {
@@ -65,7 +78,7 @@ class CajaController extends Controller
         ]);
 
         if (Caja::where('user_id', Auth::id())->where('estado', 'abierta')->exists()) {
-            return redirect()->route('cajas.index')->with('error', 'Ya tienes una caja abierta. Cierra el turno anterior primero.');
+            return redirect()->route('cajas.index')->with('error', 'Ya tienes una caja abierta.');
         }
 
         Caja::create([
@@ -75,11 +88,11 @@ class CajaController extends Controller
             'estado' => 'abierta',
         ]);
 
-        return redirect()->route('cajas.index')->with('success', 'Caja abierta exitosamente con saldo inicial de $' . number_format($request->saldo_inicial, 2));
+        return redirect()->route('cajas.index')->with('success', 'Caja abierta exitosamente.');
     }
 
     /**
-     * Cierra la caja abierta (Modificado para incluir ventas y crear movimiento).
+     * Cierra la caja abierta.
      */
     public function cerrarCaja(Request $request)
     {
@@ -88,117 +101,82 @@ class CajaController extends Controller
             ->first();
 
         if (!$caja) {
-            return redirect()->route('cajas.index')->with('error', 'No se encontró ninguna caja abierta para cerrar.');
+            return redirect()->route('cajas.index')->with('error', 'No se encontró ninguna caja abierta.');
         }
 
-        // <-- MODIFICADO: Usar transacción para asegurar atomicidad -->
         DB::beginTransaction();
         
         try {
-            // Calcular saldo de movimientos manuales
-            // 1. Sumar todos los ingresos
-            $ingresosManuales = MovimientoCaja::where('caja_id', $caja->id)
-                ->where('tipo', 'ingreso')
-                ->sum('monto');
-
-            // 2. Sumar todos los egresos (todo lo que NO sea 'ingreso')
-            $egresosManuales = MovimientoCaja::where('caja_id', $caja->id)
-                ->where('tipo', '!=', 'ingreso')
-                ->sum('monto');
-
-            // 3. Calcular el saldo final de movimientos
+            // 1. Movimientos manuales
+            $ingresosManuales = MovimientoCaja::where('caja_id', $caja->id)->where('tipo', 'ingreso')->sum('monto');
+            $egresosManuales = MovimientoCaja::where('caja_id', $caja->id)->where('tipo', '!=', 'ingreso')->sum('monto');
             $saldoMovimientos = $ingresosManuales - $egresosManuales;
         
-            // <-- TODO EL CÓDIGO SIGUIENTE AHORA VA DENTRO DEL 'try' -->
-
-            // <-- MODIFICADO: Calcular Ventas en Efectivo para ESTA caja específica -->
+            // 2. Ventas Efectivo
             $ventasEfectivo = Venta::where('user_id', Auth::id()) 
                 ->where('metodo_pago', 'efectivo')
-                ->where('fecha_hora', '>=', $caja->fecha_hora_apertura) // Desde apertura
-                ->where('fecha_hora', '<=', now()) // Hasta el cierre
-                // ->where('caja_id', $caja->id) // Si tuvieras caja_id en Ventas
+                ->where('fecha_hora', '>=', $caja->fecha_hora_apertura) 
+                ->where('fecha_hora', '<=', now()) 
                 ->sum('total');
 
-            // <-- MODIFICADO: Calcular saldo final incluyendo ventas en efectivo -->
-            $saldoCalculadoCierre = $caja->saldo_inicial + $saldoMovimientos + $ventasEfectivo;
+            // 3. Anticipos en Efectivo
+            $anticiposQuery = Anticipo::where('user_id', Auth::id()) 
+                ->where('created_at', '>=', $caja->fecha_hora_apertura)
+                ->where('created_at', '<=', now())
+                ->get(); 
 
-            // <-- NUEVO: Registrar las ventas en efectivo como un movimiento de caja al cerrar -->
+            $anticiposEfectivo = $anticiposQuery->filter(function ($ant) {
+                return strtolower($ant->metodo_pago) === 'efectivo';
+            })->sum('monto');
+
+            // 4. Saldo FINAL
+            $saldoCalculadoCierre = $caja->saldo_inicial + $saldoMovimientos + $ventasEfectivo + $anticiposEfectivo;
+
+            // Registrar Movimiento de VENTAS
             if ($ventasEfectivo > 0) {
                 MovimientoCaja::create([
                     'caja_id' => $caja->id,
-                    'user_id' => Auth::id(), // <-- AÑADIDO: Guardar quién hizo el movimiento
+                    'user_id' => Auth::id(),
                     'tipo' => 'ingreso',
                     'descripcion' => 'Ventas en Efectivo del Turno',
                     'monto' => $ventasEfectivo,
-                    'metodo_pago' => 'sistema', // Indicar que es automático
-                    'created_at' => now(), // Asegurar timestamp
-                    'updated_at' => now(),
+                    'metodo_pago' => 'sistema',
                 ]);
             }
 
-            // Actualizar el registro de caja
+            // 5. Registrar Movimiento de ANTICIPOS
+            if ($anticiposEfectivo > 0) {
+                MovimientoCaja::create([
+                    'caja_id' => $caja->id,
+                    'user_id' => Auth::id(),
+                    'tipo' => 'ingreso',
+                    'descripcion' => 'Anticipos/Apartados del Turno',
+                    'monto' => $anticiposEfectivo,
+                    'metodo_pago' => 'sistema',
+                ]);
+            }
+
             $caja->update([
                 'fecha_hora_cierre' => now(),
-                'saldo_final' => $saldoCalculadoCierre, // Usar el saldo calculado que incluye ventas
+                'saldo_final' => $saldoCalculadoCierre, 
                 'estado' => 'cerrada',
             ]);
 
-            DB::commit(); // Confirmar transacción
-
-            return redirect()->route('cajas.index')->with('success', 'Caja cerrada exitosamente. Saldo final calculado: $' . number_format($saldoCalculadoCierre, 2));
+            DB::commit();
+            return redirect()->route('cajas.index')->with('success', 'Caja cerrada. Saldo final: $' . number_format($saldoCalculadoCierre, 2));
 
         } catch (\Exception $e) {
-            DB::rollBack(); // Revertir en caso de error
-            \Log::error("Error al cerrar caja: " . $e->getMessage()); // Loguear el error
-            return redirect()->route('cajas.index')->with('error', 'Ocurrió un error al cerrar la caja. Verifique los logs.');
+            DB::rollBack();
+            \Log::error("Error al cerrar caja: " . $e->getMessage());
+            return redirect()->route('cajas.index')->with('error', 'Error al cerrar la caja: ' . $e->getMessage());
         }
     }
 
-    // ===================================================================
-    // ============= ¡NUEVA FUNCIÓN PARA MOVIMIENTOS MANUALES! =============
-    // ===================================================================
     /**
-     * Registra un movimiento manual (ingreso o egreso) en la caja abierta.
-     */
-    public function registrarMovimiento(Request $request)
-    {
-        $request->validate([
-            'caja_id' => 'required|exists:cajas,id',
-            'tipo' => 'required|in:ingreso,egreso', // Validar 'ingreso' o 'egreso'
-            'monto' => 'required|numeric|min:0.01', // Monto siempre positivo
-            'descripcion' => 'required|string|max:255',
-        ]);
-
-        // Doble chequeo: la caja debe estar abierta y pertenecer al usuario
-        $cajaAbierta = Caja::where('id', $request->caja_id)
-                           ->where('user_id', Auth::id())
-                           ->where('estado', 'abierta')
-                           ->first();
-                            
-        if (!$cajaAbierta) {
-            return redirect()->route('cajas.index')->with('error', 'Error: No se encontró tu caja abierta.');
-        }
-
-        // Guardamos el movimiento usando tu estructura de tabla
-        MovimientoCaja::create([
-            'caja_id' => $cajaAbierta->id,
-            'user_id' => Auth::id(), // Guardar quién lo hizo
-            'tipo' => $request->tipo, // 'ingreso' o 'egreso'
-            'descripcion' => $request->descripcion,
-            'monto' => $request->monto,
-            'metodo_pago' => 'Efectivo (Manual)', // Método de pago descriptivo
-        ]);
-        
-        return redirect()->route('cajas.index')->with('success', 'Movimiento manual registrado exitosamente.');
-    }
-
-    /**
-     * Exporta las ventas y gastos del turno actual a un archivo CSV.
-     * (MODIFICADO: INCLUYE GASTOS Y RESUMEN, SOLO FECHA d/m/Y)
+     * Exporta las ventas, gastos y ANTICIPOS a CSV (Excel).
      */
     public function exportarVentasTurno()
     {
-        // 1. Encontrar la caja abierta
         $cajaAbierta = Caja::where('user_id', Auth::id())
             ->where('estado', 'abierta')
             ->first();
@@ -207,25 +185,25 @@ class CajaController extends Controller
             return redirect()->route('cajas.index')->with('error', 'No hay ninguna caja abierta para exportar.');
         }
 
-        // 2. Obtener VENTAS
+        // VENTAS
         $ventas = Venta::with('detalles.producto', 'user')
             ->where('user_id', Auth::id())
             ->where('fecha_hora', '>=', $cajaAbierta->fecha_hora_apertura)
             ->orderBy('fecha_hora', 'asc')
             ->get();
 
-        // 3. Obtener GASTOS (Movimientos de tipo 'egreso')
+        // GASTOS
         $gastos = MovimientoCaja::where('caja_id', $cajaAbierta->id)
             ->where('tipo', 'egreso')
             ->orderBy('created_at', 'asc')
             ->get();
 
-        if ($ventas->isEmpty() && $gastos->isEmpty()) {
-            return redirect()->route('cajas.index')->with('error', 'No hay registros para exportar en este turno.');
-        }
+        // ANTICIPOS
+        $anticipos = Anticipo::where('created_at', '>=', $cajaAbierta->fecha_hora_apertura)
+            ->orderBy('created_at', 'asc')
+            ->get();
 
-        // 4. Definir nombre del archivo
-        $fileName = "Reporte_Caja_Completo_{$cajaAbierta->id}_{$cajaAbierta->fecha_hora_apertura->format('Y-m-d')}.csv";
+        $fileName = "Reporte_Caja_{$cajaAbierta->id}_{$cajaAbierta->fecha_hora_apertura->format('Y-m-d')}.csv";
 
         $headers = [
             "Content-type"        => "text/csv",
@@ -235,158 +213,121 @@ class CajaController extends Controller
             "Expires"             => "0"
         ];
 
-        // 5. Crear la respuesta
-        return response()->stream(function() use ($ventas, $gastos) {
+        return response()->stream(function() use ($ventas, $gastos, $anticipos) {
             
             $file = fopen('php://output', 'w');
-            
-            // BOM para acentos
-            fputs($file, "\xEF\xBB\xBF");
+            fputs($file, "\xEF\xBB\xBF"); 
 
-            // ==========================================
-            // SECCIÓN 1: VENTAS
-            // ==========================================
+            // === SECCIÓN 1: VENTAS ===
             fputcsv($file, ['REPORTE DE VENTAS']);
-            fputcsv($file, [
-                'ID Venta', 
-                'Fecha', // Título "Fecha"
-                'Cajero', 
-                'Método Pago',
-                'Productos', 
-                'Total Venta'          
-            ]);
+            fputcsv($file, ['ID Venta', 'Fecha', 'Método Pago', 'Total']);
 
             $totalVentas = 0;
-
             foreach ($ventas as $venta) {
-                $fecha = \Carbon\Carbon::parse($venta->fecha_hora);
-                
-                // Procesar productos
-                $productosArray = [];
-                foreach ($venta->detalles as $detalle) {
-                    $nombreProducto = $detalle->producto->nombre ?? 'N/A';
-                    $productosArray[] = "{$detalle->cantidad} x {$nombreProducto}";
-                }
-                $productosString = implode(" | ", $productosArray);
-
                 fputcsv($file, [
                     $venta->id,
-                    $fecha->format('d/m/Y'), // <--- SOLO FECHA
-                    $venta->user->name ?? 'N/A',
+                    \Carbon\Carbon::parse($venta->fecha_hora)->format('d/m/Y'),
                     ucfirst($venta->metodo_pago),
-                    $productosString,    
-                    $venta->total          
+                    $venta->total
                 ]);
-
-                if($venta->metodo_pago == 'efectivo') {
+                if(strtolower($venta->metodo_pago) == 'efectivo') {
                     $totalVentas += $venta->total;
                 }
             }
-
-            // ==========================================
-            // SEPARADOR
-            // ==========================================
-            fputcsv($file, []); 
             fputcsv($file, []); 
 
-            // ==========================================
-            // SECCIÓN 2: GASTOS
-            // ==========================================
-            fputcsv($file, ['REPORTE DE GASTOS / SALIDAS']);
-            fputcsv($file, [
-                'Fecha', // Título "Fecha"
-                'Descripción del Gasto', 
-                'Responsable',
-                '', 
-                '', 
-                'Monto Retirado'          
-            ]);
+            // === SECCIÓN 2: ANTICIPOS ===
+            fputcsv($file, ['REPORTE DE ANTICIPOS / APARTADOS']);
+            fputcsv($file, ['Pedido Ref', 'Fecha', 'Método Pago', 'Monto']);
+
+            $totalAnticipos = 0;
+            foreach ($anticipos as $anticipo) {
+                fputcsv($file, [
+                    'Pedido #' . $anticipo->pedido_id,
+                    $anticipo->created_at->format('d/m/Y'),
+                    ucfirst($anticipo->metodo_pago),
+                    $anticipo->monto
+                ]);
+                if(strtolower($anticipo->metodo_pago) == 'efectivo') {
+                    $totalAnticipos += $anticipo->monto;
+                }
+            }
+            fputcsv($file, []);
+
+            // === SECCIÓN 3: GASTOS ===
+            fputcsv($file, ['REPORTE DE GASTOS']);
+            fputcsv($file, ['Fecha', 'Descripción', 'Monto']);
 
             $totalGastos = 0;
-
             foreach ($gastos as $gasto) {
                 fputcsv($file, [
-                    $gasto->created_at->format('d/m/Y'), // <--- SOLO FECHA
+                    $gasto->created_at->format('d/m/Y'),
                     $gasto->descripcion,
-                    $gasto->user->name ?? 'Sistema',
-                    '', 
-                    '', 
-                    '-' . $gasto->monto 
+                    '-' . $gasto->monto
                 ]);
                 $totalGastos += $gasto->monto;
             }
 
-            // ==========================================
-            // SEPARADOR Y RESUMEN FINAL
-            // ==========================================
             fputcsv($file, []);
-            fputcsv($file, []);
-            fputcsv($file, ['RESUMEN DEL TURNO']);
-            
-            fputcsv($file, ['', '', '', '', 'Total Ventas Efectivo:', $totalVentas]);
-            fputcsv($file, ['', '', '', '', 'Total Gastos:', '-' . $totalGastos]);
-            fputcsv($file, ['', '', '', '', 'BALANCE FINAL:', $totalVentas - $totalGastos]);
+            fputcsv($file, ['RESUMEN FINAL (EFECTIVO)']);
+            fputcsv($file, ['Total Ventas:', $totalVentas]);
+            fputcsv($file, ['Total Anticipos:', $totalAnticipos]);
+            fputcsv($file, ['Total Gastos:', '-' . $totalGastos]);
+            fputcsv($file, ['BALANCE FINAL:', $totalVentas + $totalAnticipos - $totalGastos]);
             
             fclose($file);
         }, 200, $headers);
     }
 
+    /**
+     * Genera el PDF del turno.
+     */
     public function exportarVentasTurnoPDF()
     {
-        // 1. Obtener la caja abierta (igual que en exportarVentasTurno)
         $cajaAbierta = Caja::where('user_id', Auth::id())
                             ->where('estado', 'abierta')
                             ->first();
 
         if (!$cajaAbierta) {
-            return redirect()->route('cajas.index')->with('error', 'No hay ninguna caja abierta para exportar.');
+            return redirect()->route('cajas.index')->with('error', 'No hay caja abierta.');
         }
 
-        // 2. Necesitamos RECOGER TODOS LOS DATOS que la vista `index` calcula,
-        //    porque el PDF también necesita los resúmenes.
-
-        // Ventas (con detalles)
         $ventas = Venta::with('detalles.producto', 'user')
             ->where('user_id', Auth::id())
             ->where('fecha_hora', '>=', $cajaAbierta->fecha_hora_apertura)
-            ->orderBy('fecha_hora', 'asc')
             ->get();
         
-        // Movimientos
-        $movimientos = MovimientoCaja::where('caja_id', $cajaAbierta->id)
-            ->orderBy('created_at', 'desc')
+        $gastos = MovimientoCaja::where('caja_id', $cajaAbierta->id)
+            ->where('tipo', 'egreso')
             ->get();
 
-        // 3. Calcular Resúmenes (igual que en la función index)
-        
-        // Ventas en Efectivo
+        $anticipos = Anticipo::where('created_at', '>=', $cajaAbierta->fecha_hora_apertura)
+            ->get();
+
         $ventasEfectivo = $ventas->where('metodo_pago', 'efectivo')->sum('total');
+        
+        $anticiposEfectivo = $anticipos->filter(function ($ant) {
+            return strtolower($ant->metodo_pago) === 'efectivo';
+        })->sum('monto');
 
-        // Saldo Movimientos Manuales
-        $ingresosManuales = $movimientos->where('tipo', 'ingreso')->sum('monto');
-        $egresosManuales = $movimientos->where('tipo', '!=', 'ingreso')->sum('monto');
-        $saldoMovimientos = $ingresosManuales - $egresosManuales;
+        $totalGastos = $gastos->sum('monto');
+        $saldoActual = $cajaAbierta->saldo_inicial + $ventasEfectivo + $anticiposEfectivo - $totalGastos;
 
-        // Saldo Actual Total
-        $saldoActual = $cajaAbierta->saldo_inicial + $ventasEfectivo + $saldoMovimientos;
-
-        // 4. Preparar los datos para la vista
         $data = [
             'cajaAbierta' => $cajaAbierta,
             'ventas' => $ventas,
-            'movimientos' => $movimientos,
+            'gastos' => $gastos,
+            'anticipos' => $anticipos,
             'ventasEfectivo' => $ventasEfectivo,
-            'saldoMovimientos' => $saldoMovimientos,
+            'anticiposEfectivo' => $anticiposEfectivo,
+            'totalGastos' => $totalGastos,
             'saldoActual' => $saldoActual
         ];
 
-        // 5. Generar y enviar el PDF
-        // Usamos la NUEVA vista 'reporte_ventas_pdf'
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('cajas.reporte_ventas_pdf', $data)
-                                        ->setPaper('a4', 'portrait'); // 'portrait' (vertical) o 'landscape' (horizontal)
+        $pdf = Pdf::loadView('cajas.reporte_ventas_pdf', $data)
+                  ->setPaper('a4', 'portrait');
 
-        // Descargar (o mostrar en navegador)
-        $fileName = "Reporte_Ventas_Caja_{$cajaAbierta->id}_{$cajaAbierta->fecha_hora_apertura->format('Y-m-d')}.pdf";
-        return $pdf->stream($fileName); // stream() lo muestra, download() lo descarga
+        return $pdf->stream("Reporte_Caja_{$cajaAbierta->id}.pdf");
     }
-}
+
+} // <--- ¡AQUÍ TERMINA LA CLASE! Todo debe estar antes de esta llave.

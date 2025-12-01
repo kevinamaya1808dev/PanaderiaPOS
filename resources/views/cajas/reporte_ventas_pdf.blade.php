@@ -9,13 +9,14 @@
         .header h1 { margin: 0; }
         .header p { margin: 2px 0; }
         table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        th, td { border: 1px solid #ddd; padding: 6px; text-align: left; vertical-align: top; } /* vertical-align: top es útil aquí */
+        th, td { border: 1px solid #ddd; padding: 6px; text-align: left; vertical-align: top; }
         th { background-color: #f2f2f2; }
         .text-right { text-align: right; }
         .text-bold { font-weight: bold; }
+        .text-success { color: green; }
+        .text-danger { color: red; }
         .summary-table { width: 50%; float: right; }
         .summary-table td { border: none; padding: 4px; }
-        /* Estilo para la celda de productos */
         .productos-cell { font-size: 11px; line-height: 1.4; }
     </style>
 </head>
@@ -25,82 +26,98 @@
         <h1>Panadería Kairos</h1>
         <p>Reporte de Ventas del Turno</p>
         <p><strong>Cajero:</strong> {{ $cajaAbierta->user->name ?? 'N/A' }}</p>
-        <p><strong>Fecha de Apertura:</strong> {{ $cajaAbierta->fecha_hora_apertura->format('d/m/Y') }}</p>
+        <p><strong>Fecha de Apertura:</strong> {{ $cajaAbierta->fecha_hora_apertura->format('d/m/Y H:i') }}</p>
     </div>
 
-    <h2>Desglose de Ventas del Turno</h2>
+    {{-- 1. TABLA DE VENTAS --}}
+    <h3>Desglose de Ventas del Turno</h3>
     <table>
         <thead>
             <tr>
-                <th style="width: 10%;">ID Venta</th>
+                <th style="width: 10%;">ID</th>
                 <th style="width: 15%;">Fecha</th>
-                <th>Productos (Desglose)</th>
-                <th style="width: 15%;">Total Venta</th>
-                <th style="width: 15%;">Método Pago</th>
+                <th>Productos</th>
+                <th style="width: 15%;">Total</th>
+                <th style="width: 15%;">Método</th>
             </tr>
         </thead>
         <tbody>
             @forelse($ventas as $venta)
-                {{-- Ahora solo hay UNA fila por VENTA --}}
                 <tr>
                     <td>{{ $venta->id }}</td>
-                    <td>{{ \Carbon\Carbon::parse($venta->fecha_hora)->format('d/m/y') }}</td>
-                    
-                    {{-- Celda con la lista de productos --}}
+                    <td>{{ \Carbon\Carbon::parse($venta->fecha_hora)->format('d/m/Y') }}</td>
                     <td class="productos-cell">
                         @foreach($venta->detalles as $detalle)
                             {{ $detalle->cantidad }} x {{ $detalle->producto->nombre ?? 'N/A' }}<br>
                         @endforeach
                     </td>
-
                     <td class="text-right">${{ number_format($venta->total, 2) }}</td>
                     <td>{{ ucfirst($venta->metodo_pago) }}</td>
                 </tr>
             @empty
                 <tr>
-                    {{-- El colspan ahora es 5 --}}
-                    <td colspan="5">No se registraron ventas en este turno.</td>
+                    <td colspan="5" style="text-align: center;">No se registraron ventas en este turno.</td>
                 </tr>
             @endforelse
         </tbody>
     </table>
 
-    <br>
-
-    <h2>Movimientos Manuales</h2>
+    {{-- 2. TABLA DE ANTICIPOS (NUEVA SECCIÓN) --}}
+    <h3>Anticipos / Apartados</h3>
     <table>
         <thead>
             <tr>
-                <th>Fecha</th>
-                <th>Tipo</th>
-                <th>Descripción</th>
-                <th>Monto</th>
+                <th style="width: 20%;">Fecha</th>
+                <th>Referencia / Pedido</th>
+                <th style="width: 15%;">Método</th>
+                <th style="width: 15%;">Monto</th>
             </tr>
         </thead>
         <tbody>
-            @forelse($movimientos as $mov)
+            @forelse($anticipos as $anticipo)
                 <tr>
-                    <td>{{ $mov->created_at->format('d/m/y') }}</td>
-                    <td>{{ ucfirst($mov->tipo) }}</td>
-                    <td>{{ $mov->descripcion ?? 'N/A' }}</td>
-                    <td class="text-right {{ $mov->tipo == 'ingreso' ? 'text-success' : 'text-danger' }}">
-                        {{ $mov->tipo == 'ingreso' ? '+' : '-' }}${{ number_format($mov->monto, 2) }}
-                    </td>
+                    <td>{{ $anticipo->created_at->format('d/m/Y') }}</td>
+                    <td>Pedido #{{ $anticipo->pedido_id }}</td>
+                    <td>{{ ucfirst($anticipo->metodo_pago) }}</td>
+                    <td class="text-right text-success">+${{ number_format($anticipo->monto, 2) }}</td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="4">No se registraron movimientos manuales.</td>
+                    <td colspan="4" style="text-align: center;">No hay anticipos registrados.</td>
                 </tr>
-            {{-- ----- ¡AQUÍ ESTABA EL ERROR! ----- --}}
-            {{-- Escribí @endforese en lugar de @endforelse --}}
             @endforelse
-            {{-- ----- FIN DE LA CORRECCIÓN ----- --}}
         </tbody>
     </table>
-    
+
+    {{-- 3. TABLA DE GASTOS --}}
+    <h3>Gastos y Salidas</h3>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 20%;">Fecha</th>
+                <th>Descripción</th>
+                <th style="width: 15%;">Monto</th>
+            </tr>
+        </thead>
+        <tbody>
+            @forelse($gastos as $gasto)
+                <tr>
+                    <td>{{ $gasto->created_at->format('d/m/Y') }}</td>
+                    <td>{{ $gasto->descripcion }}</td>
+                    <td class="text-right text-danger">-${{ number_format($gasto->monto, 2) }}</td>
+                </tr>
+            @empty
+                <tr>
+                    <td colspan="3" style="text-align: center;">No hay gastos registrados.</td>
+                </tr>
+            @endforelse
+        </tbody>
+    </table>
+
     <br>
 
-    <h2>Resumen Financiero del Turno</h2>
+    {{-- 4. RESUMEN FINANCIERO --}}
+    <h3>Resumen Financiero (Efectivo)</h3>
     <table class="summary-table">
         <tr>
             <td>Saldo Inicial:</td>
@@ -111,12 +128,18 @@
             <td class="text-right">${{ number_format($ventasEfectivo, 2) }}</td>
         </tr>
         <tr>
-            <td>(+/-) Movimientos Manuales:</td>
-            <td class="text-right">{{ $saldoMovimientos >= 0 ? '+' : '-' }}${{ number_format(abs($saldoMovimientos), 2) }}</td>
+            <td>(+) Anticipos en Efectivo:</td>
+            <td class="text-right">${{ number_format($anticiposEfectivo, 2) }}</td>
         </tr>
         <tr>
-            <td class="text-bold">Saldo Final Estimado:</td>
-            <td class="text-right text-bold">${{ number_format($saldoActual, 2) }}</td>
+            <td>(-) Gastos / Salidas:</td>
+            <td class="text-right text-danger">-${{ number_format($totalGastos, 2) }}</td>
+        </tr>
+        <tr>
+            <td class="text-bold" style="border-top: 1px solid #000; padding-top: 5px;">Saldo Final Calculado:</td>
+            <td class="text-right text-bold" style="border-top: 1px solid #000; padding-top: 5px;">
+                ${{ number_format($saldoActual, 2) }}
+            </td>
         </tr>
     </table>
 

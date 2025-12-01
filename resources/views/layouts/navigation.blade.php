@@ -127,6 +127,7 @@
         </li>
     @endif
 
+
     {{-- =============================================== --}}
     {{-- SECCIÓN: OPERACIONES DE CAJA --}}
     {{-- =============================================== --}}
@@ -161,4 +162,13 @@
             </a>
         </li>
     @endif
+             @if (Auth::user()->hasPermissionTo('cajas', 'mostrar'))
+<li class="nav-item">
+    {{-- La clase 'active' se pone sola si estás dentro de la sección de pedidos --}}
+    <a class="nav-link {{ request()->routeIs('pedidos.*') ? 'active' : '' }}" href="{{ route('pedidos.index') }}">
+        {{-- CORREGIDO: Se quitó 'text-warning' y se cambió 'me-1' por 'me-2' para alinear con los demás --}}
+        <i class="fas fa-birthday-cake me-2"></i> Encargos / Pedidos
+    </a>
+</li>
+@endif
 </ul>

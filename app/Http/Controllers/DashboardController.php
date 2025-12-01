@@ -14,10 +14,10 @@ class DashboardController extends Controller
     public function index()
     {
         // --- MÉTRICAS DE TARJETAS (Semanal y Mensual) ---
-        // (Este código se mantiene igual que antes para las tarjetas de arriba)
+        // Limpiamos el array: Solo nos importan los ingresos
         $metrics = [
-            'weekly' => ['ingresos' => 0, 'costos' => 0, 'utilidad' => 0],
-            'monthly' => ['ingresos' => 0, 'costos' => 0, 'utilidad' => 0],
+            'weekly' => ['ingresos' => 0],
+            'monthly' => ['ingresos' => 0],
         ];
 
         if (Auth::user()->hasPermissionTo('cargos', 'mostrar')) {
@@ -25,22 +25,24 @@ class DashboardController extends Controller
             // SEMANA
             $startOfWeek = now()->startOfWeek(Carbon::MONDAY);
             $endOfWeek = now()->endOfWeek(Carbon::SUNDAY);
+            
+            // Consulta simplificada: SOLO suma 'importe' (Ventas)
             $weeklyData = DetalleVenta::whereBetween('created_at', [$startOfWeek, $endOfWeek])
-                ->select(DB::raw('SUM(importe) as ingresos'), DB::raw('SUM(cantidad * costo_unitario) as costos'))
+                ->select(DB::raw('SUM(importe) as ingresos'))
                 ->first();
+                
             $metrics['weekly']['ingresos'] = $weeklyData->ingresos ?? 0;
-            $metrics['weekly']['costos'] = $weeklyData->costos ?? 0;
-            $metrics['weekly']['utilidad'] = $metrics['weekly']['ingresos'] - $metrics['weekly']['costos'];
 
             // MES
             $startOfMonth = now()->startOfMonth();
             $endOfMonth = now()->endOfMonth();
+            
+            // Consulta simplificada: SOLO suma 'importe' (Ventas)
             $monthlyData = DetalleVenta::whereBetween('created_at', [$startOfMonth, $endOfMonth])
-                ->select(DB::raw('SUM(importe) as ingresos'), DB::raw('SUM(cantidad * costo_unitario) as costos'))
+                ->select(DB::raw('SUM(importe) as ingresos'))
                 ->first();
+                
             $metrics['monthly']['ingresos'] = $monthlyData->ingresos ?? 0;
-            $metrics['monthly']['costos'] = $monthlyData->costos ?? 0;
-            $metrics['monthly']['utilidad'] = $metrics['monthly']['ingresos'] - $metrics['monthly']['costos'];
         }
 
         return view('dashboard', compact('metrics'));
@@ -57,13 +59,11 @@ class DashboardController extends Controller
         
         $mesSeleccionado = $request->input('month');
 
-        // --- 1. GRÁFICA COMPARATIVA (Ventas vs Utilidad) ---
-        // Consultamos DetalleVenta para tener acceso al costo_unitario
+        // --- 1. GRÁFICA DE VENTAS (SOLO VENTAS) ---
+        // Eliminamos el cálculo de utilidad que usaba costos
         $datosPorMes = DetalleVenta::select(
             DB::raw('MONTH(created_at) as mes'),
-            DB::raw('SUM(importe) as total_ventas'),
-            // Utilidad = Importe - (Cantidad * Costo)
-            DB::raw('SUM(importe - (cantidad * costo_unitario)) as total_utilidad')
+            DB::raw('SUM(importe) as total_ventas')
         )
         ->whereYear('created_at', now()->year)
         ->groupBy('mes')
@@ -71,11 +71,15 @@ class DashboardController extends Controller
         ->get();
 
         // --- 2. Gráfica de Top Productos ---
+        // AQUI ESTÁ EL CAMBIO: Filtramos los eliminados
         $topProductos = DetalleVenta::join('productos', 'detalle_ventas.producto_id', '=', 'productos.id')
             ->select(
                 'productos.nombre',
                 DB::raw('SUM(detalle_ventas.cantidad) as total_cantidad')
             )
+            // --- NUEVA LÍNEA: Excluir productos con fecha de eliminación ---
+            ->whereNull('productos.deleted_at') 
+            // -------------------------------------------------------------
             ->whereYear('detalle_ventas.created_at', now()->year)
             ->when($mesSeleccionado, function ($query) use ($mesSeleccionado) {
                 return $query->whereMonth('detalle_ventas.created_at', $mesSeleccionado);
@@ -86,7 +90,7 @@ class DashboardController extends Controller
             ->get();
 
         return response()->json([
-            'datos_por_mes' => $datosPorMes, // Enviamos ventas y utilidad juntos
+            'datos_por_mes' => $datosPorMes,
             'top_productos' => $topProductos,
         ]);
     }

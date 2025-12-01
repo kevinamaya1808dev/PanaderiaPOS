@@ -267,4 +267,7 @@ Route::post('empleados/{id}/nomina', [NominaController::class, 'store'])->name('
 
 Route::post('/empleados/{id}/nomina/liquidar', [App\Http\Controllers\NominaController::class, 'liquidar'])->name('nomina.liquidar');
 
+
+Route::resource('pedidos', App\Http\Controllers\PedidoController::class);
+Route::post('pedidos/{id}/entregar', [App\Http\Controllers\PedidoController::class, 'entregar'])->name('pedidos.entregar');
 });
