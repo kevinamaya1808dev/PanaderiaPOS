@@ -2,26 +2,34 @@
 
 @section('content')
 <div class="container">
-    <h2 class="mb-4">Cobrar Ventas Pendientes</h2>
+    
+    {{-- Título --}}
+    <h2 class="mb-4">
+        <i class="fas fa-hand-holding-usd text-secondary me-2"></i> Cobrar Ventas Pendientes
+    </h2>
 
-    <div class="row justify-content-center">
+    {{-- Buscador Manual (Estilo Card Suave) --}}
+    <div class="row justify-content-center mb-4">
         <div class="col-md-8">
-            <div class="input-group input-group-lg shadow-sm mb-3">
-                <span class="input-group-text"><i class="fas fa-ticket-alt"></i></span>
-                <input type="number" class="form-control" id="folio-search-input" placeholder="Ingresar Folio (ID) del Ticket...">
+            <div class="input-group input-group-lg shadow-sm">
+                <span class="input-group-text bg-white"><i class="fas fa-ticket-alt text-muted"></i></span>
+                <input type="number" class="form-control border-start-0" id="folio-search-input" placeholder="Ingresar Folio (ID) del Ticket...">
                 <button class="btn btn-primary" id="folio-search-btn">
                     <i class="fas fa-search me-2"></i> Buscar Manualmente
                 </button>
             </div>
-            <div id="search-error" class="alert alert-danger" style="display: none;"></div>
+            <div id="search-error" class="alert alert-danger mt-2" style="display: none;"></div>
         </div>
     </div>
 
-    <div id="venta-encontrada-card" class="card shadow-lg mt-3" style="display: none;">
-        {{-- Esta tarjeta se llena con JavaScript cuando se busca o selecciona --}}
+    {{-- Tarjeta de Venta Encontrada (Se mantiene oculta hasta buscar) --}}
+    <div id="venta-encontrada-card" class="card shadow-lg mt-3 mb-5" style="display: none;">
+        {{-- Se llena con JS --}}
     </div>
 
     <hr class="my-4">
+
+    {{-- Encabezado de la Tabla y Spinner --}}
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h4 class="mb-0">Cola de Pagos Pendientes</h4>
         <div id="loading-spinner" class="spinner-border spinner-border-sm text-primary" role="status" style="display: none;">
@@ -29,54 +37,64 @@
         </div>
     </div>
     
-    <div id="lista-pendientes-wrapper" class="card shadow-sm">
-        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
-            <table class="table table-hover mb-0">
-                <thead class="thead-light" style="position: sticky; top: 0; z-index: 1;">
+    {{-- Tabla libre en el contenedor (Estilo Unificado) --}}
+    <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+        <table class="table table-striped table-hover align-middle mb-0">
+            <thead class="table-dark" style="position: sticky; top: 0; z-index: 1;">
+                <tr>
+                    <th class="ps-4">Folio</th>
+                    <th>Fecha</th>
+                    <th>Embolsador</th>
+                    <th>Productos</th>
+                    <th>Total</th>
+                    <th class="text-end pe-4">Acción</th>
+                </tr>
+            </thead>
+            <tbody id="lista-pendientes-body">
+                {{-- La lista inicial se carga con PHP --}}
+                @forelse($ventasPendientes as $venta)
                     <tr>
-                        <th>Folio</th>
-                        <th>Fecha</th>
-                        <th>Embolsador</th>
-                        <th>Productos</th>
-                        <th>Total</th>
-                        <th>Acción</th>
+                        <td class="ps-4 fw-bold">{{ $venta->id }}</td>
+                        <td>{{ \Carbon\Carbon::parse($venta->fecha_hora)->format('d/m/y H:i') }}</td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" 
+                                     style="width: 30px; height: 30px; font-size: 0.8rem;">
+                                    {{ strtoupper(substr($venta->user->name ?? '?', 0, 1)) }}
+                                </div>
+                                {{ $venta->user->name ?? 'N/A' }}
+                            </div>
+                        </td>
+                        <td>
+                            <ul class="list-unstyled mb-0 text-muted" style="font-size: 0.85em;">
+                                @foreach($venta->detalles as $detalle)
+                                    <li>{{ $detalle->cantidad }} x {{ $detalle->producto->nombre ?? '?' }}</li>
+                                @endforeach
+                            </ul>
+                        </td>
+                        <td class="fw-bold text-danger">${{ number_format($venta->total, 2) }}</td>
+                        <td class="text-end pe-4">
+                            <button class="btn btn-sm btn-warning btn-cobrar-lista shadow-sm" data-folio="{{ $venta->id }}">
+                                <i class="fas fa-cash-register me-1"></i> Cobrar
+                            </button>
+                        </td>
                     </tr>
-                </thead>
-                <tbody id="lista-pendientes-body">
-                    {{-- La lista inicial se carga con PHP --}}
-                    @forelse($ventasPendientes as $venta)
-                        <tr>
-                            <td class="fw-bold">{{ $venta->id }}</td>
-                            <td>{{ \Carbon\Carbon::parse($venta->fecha_hora)->format('d/m/y') }}</td>
-                            <td>{{ $venta->user->name ?? 'N/A' }}</td>
-                            <td>
-                                <ul class="list-unstyled mb-0" style="font-size: 0.9em;">
-                                    @foreach($venta->detalles as $detalle)
-                                        <li>{{ $detalle->cantidad }} x {{ $detalle->producto->nombre ?? '?' }}</li>
-                                    @endforeach
-                                </ul>
-                            </td>
-                            <td class="fw-bold">${{ number_format($venta->total, 2) }}</td>
-                            <td>
-                                <button class="btn btn-sm btn-warning btn-cobrar-lista" data-folio="{{ $venta->id }}">
-                                    Cobrar
-                                </button>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr id="no-pendientes-row">
-                            <td colspan="6" class="text-center text-muted p-3">No hay ventas pendientes por el momento.</td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
+                @empty
+                    <tr id="no-pendientes-row">
+                        <td colspan="6" class="text-center text-muted p-5">
+                            <i class="fas fa-check-circle fa-3x mb-3 text-success opacity-50"></i><br>
+                            No hay ventas pendientes por el momento.
+                        </td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
     </div>
 </div>
 
 
 {{-- ========================================================== --}}
-{{-- MODAL DE PAGO --}}
+{{-- MODAL DE PAGO (Lógica Intacta) --}}
 {{-- ========================================================== --}}
 <div class="modal fade" id="paymentModal" tabindex="-1" aria-labelledby="paymentModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered">
@@ -125,11 +143,8 @@
         </div>
     </div>
 </div>
-{{-- ***** FIN MODAL DE PAGO ***** --}}
 
-{{-- ========================================================== --}}
-{{-- ¡NUEVO! MODAL DE ALERTA (Estilo Profesional) --}}
-{{-- ========================================================== --}}
+{{-- MODAL DE ALERTA --}}
 <div class="modal fade" id="alertModal" tabindex="-1" aria-labelledby="alertModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -147,7 +162,7 @@
     </div>
 </div>
 
-{{-- ***** IFRAME OCULTO ***** --}}
+{{-- IFRAME OCULTO --}}
 <iframe id="print-frame" name="printFrame" style="display: none; border: 0;"></iframe>
 
 @endsection
@@ -185,7 +200,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     let ventaEncontrada = null; 
 
-    // --- Referencias del Modal de Alerta (NUEVO) ---
+    // --- Referencias del Modal de Alerta ---
     const alertModalElement = document.getElementById('alertModal');
     let alertModal = null;
     if (alertModalElement) {
@@ -197,25 +212,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // --- Función Helper para Mostrar Alertas ---
     function showAlertModal(body, title = 'Atención', type = 'danger') {
-        if (!alertModal) { alert(body); return; } // Fallback por seguridad
+        if (!alertModal) { alert(body); return; }
         alertModalTitle.textContent = title;
         alertModalBody.textContent = body;
         
-        // Reset classes
         alertModalHeader.className = 'modal-header text-white'; 
-        
-        // Asignar color según tipo
-        if (type === 'danger') {
-            alertModalHeader.classList.add('bg-danger');
-        } else if (type === 'success') {
-            alertModalHeader.classList.add('bg-success');
-        } else if (type === 'warning') {
+        if (type === 'danger') alertModalHeader.classList.add('bg-danger');
+        else if (type === 'success') alertModalHeader.classList.add('bg-success');
+        else if (type === 'warning') {
             alertModalHeader.classList.add('bg-warning');
-            alertModalHeader.classList.remove('text-white'); // Warning suele ir mejor con texto oscuro
+            alertModalHeader.classList.remove('text-white');
             alertModalHeader.classList.add('text-dark');
-        } else {
-            alertModalHeader.classList.add('bg-primary');
-        }
+        } else alertModalHeader.classList.add('bg-primary');
 
         alertModal.show();
     }
@@ -223,9 +231,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // --- Lógica de Búsqueda ---
     searchBtn.addEventListener('click', () => buscarVenta(null)); 
     searchInput.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            buscarVenta(null);
-        }
+        if (e.key === 'Enter') buscarVenta(null);
     });
 
     async function buscarVenta(folio = null) {
@@ -239,7 +245,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = await response.json();
 
             if (!response.ok) {
-                // Aquí usamos mostrarError (inline) porque es mejor para búsquedas que un popup
                 mostrarError(data.error || 'Error al buscar la venta.');
             } else {
                 ventaEncontrada = data; 
@@ -346,7 +351,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // --- Lógica de Confirmar Pago (MODIFICADA PARA USAR ALERT MODAL) ---
+    // --- Lógica de Confirmar Pago ---
     confirmPaymentBtn.addEventListener('click', async function() {
         if (!ventaEncontrada) return;
 
@@ -359,7 +364,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (metodoPago === 'efectivo') {
             montoEntregado = Math.max(0, montoRecibido - total); 
             if (montoRecibido < total) {
-                // REEMPLAZO: alert('Monto recibido insuficiente.');
                 showAlertModal('Monto recibido insuficiente.', 'Atención', 'warning');
                 return; 
             }
@@ -367,7 +371,6 @@ document.addEventListener('DOMContentLoaded', function() {
             montoRecibido = total; 
             montoEntregado = 0;
             if (!folioTarjeta) {
-                // REEMPLAZO: alert('Por favor, ingrese el folio...');
                 showAlertModal('Por favor, ingrese el folio o número de autorización.', 'Falta Información', 'warning');
                 return;
             }
@@ -395,24 +398,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (response.ok) {
                 if (paymentModal) paymentModal.hide();
-                
-                // REEMPLAZO: alert(result.message); location.reload();
-                // Ahora mostramos el modal de éxito y recargamos SOLO cuando se cierre
                 showAlertModal(result.message, '¡Pago Registrado!', 'success');
-                
-                // Event listener de una sola vez para recargar la página al cerrar el modal de éxito
                 alertModalElement.addEventListener('hidden.bs.modal', function () {
                     location.reload();
                 }, { once: true });
-
             } else { 
-                // REEMPLAZO: alert('Error...');
                 let errorMsg = result.error || 'Error desconocido';
                 showAlertModal(errorMsg, 'Error al procesar', 'danger');
             }
         } catch (e) { 
             console.error('Error al procesar el pago:', e); 
-            // REEMPLAZO: alert('Error de conexión.');
             showAlertModal('Error de conexión con el servidor.', 'Error de Red', 'danger');
         } 
         finally {
@@ -421,7 +416,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // --- Lógica de Polling ---
+    // --- Lógica de Polling (Clic en botones de lista) ---
     listaPendientesBody.addEventListener('click', function(e) {
         const targetButton = e.target.closest('.btn-cobrar-lista');
         if (targetButton) {
@@ -430,29 +425,52 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // --- Renderizado de Lista (AJAX) ---
     function renderListaPendientes(ventas) {
         listaPendientesBody.innerHTML = ''; 
         if (ventas.length === 0) {
             listaPendientesBody.innerHTML = `
                 <tr id="no-pendientes-row">
-                    <td colspan="6" class="text-center text-muted p-3">No hay ventas pendientes por el momento.</td>
+                    <td colspan="6" class="text-center text-muted p-5">
+                         <i class="fas fa-check-circle fa-3x mb-3 text-success opacity-50"></i><br>
+                        No hay ventas pendientes por el momento.
+                    </td>
                 </tr>`;
         } else {
             ventas.forEach(venta => {
-                let productosHtml = '<ul class="list-unstyled mb-0" style="font-size: 0.9em;">';
+                let productosHtml = '<ul class="list-unstyled mb-0 text-muted" style="font-size: 0.85em;">';
                 venta.detalles.forEach(detalle => {
                     productosHtml += `<li>${detalle.cantidad} x ${detalle.producto.nombre ?? '?'}</li>`;
                 });
                 productosHtml += '</ul>';
 
+                // Formateo de fecha
+                const fecha = new Date(venta.fecha_hora);
+                const fechaStr = fecha.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit' }) + ' ' +
+                                 fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+
+                // Inicial del nombre
+                const nombre = venta.user.name ?? 'N/A';
+                const inicial = nombre.charAt(0).toUpperCase();
+
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td class="fw-bold">${venta.id}</td>
-                    <td>${new Date(venta.fecha_hora).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit' })}</td>
-                    <td>${venta.user.name ?? 'N/A'}</td>
+                    <td class="ps-4 fw-bold">${venta.id}</td>
+                    <td>${fechaStr}</td>
                     <td>
-                        <button class="btn btn-sm btn-warning btn-cobrar-lista" data-folio="${venta.id}">
-                            Cobrar
+                        <div class="d-flex align-items-center">
+                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" 
+                                 style="width: 30px; height: 30px; font-size: 0.8rem;">
+                                ${inicial}
+                            </div>
+                            ${nombre}
+                        </div>
+                    </td>
+                    <td>${productosHtml}</td>
+                    <td class="fw-bold text-danger">$${parseFloat(venta.total).toFixed(2)}</td>
+                    <td class="text-end pe-4">
+                        <button class="btn btn-sm btn-warning btn-cobrar-lista shadow-sm" data-folio="${venta.id}">
+                            <i class="fas fa-cash-register me-1"></i> Cobrar
                         </button>
                     </td>
                 `;
