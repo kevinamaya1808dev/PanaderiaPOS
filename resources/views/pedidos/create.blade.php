@@ -19,7 +19,7 @@
                     </div>
                     <div class="card-body">
 
-                        {{-- Campos Manuales (se llenan solos si eliges cliente) --}}
+                        {{-- Campos Manuales --}}
                         <div class="mb-3">
                             <label class="form-label">Nombre *</label>
                             <input type="text" name="nombre_cliente" id="nombre_cliente" class="form-control" required placeholder="Ej: Sra. Mari">
@@ -55,25 +55,27 @@
                         </button>
                     </div>
                     <div class="card-body p-0">
-                        <table class="table table-striped mb-0" id="tablaDetalles">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Producto</th>
-                                    <th width="100">Cant.</th>
-                                    <th width="120">Precio</th>
-                                    <th width="120">Subtotal</th>
-                                    <th width="50"></th>
-                                </tr>
-                            </thead>
-                            <tbody id="listaProductos">
-                                {{-- Aquí se agregarán los productos con JS --}}
-                                <tr id="filaVacia">
-                                    <td colspan="5" class="text-center text-muted p-4">
-                                        Agrega productos al pedido...
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
+                        <div class="table-responsive">
+                            <table class="table table-striped mb-0" id="tablaDetalles">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Producto</th>
+                                        <th width="100">Cant.</th>
+                                        <th width="120">Precio</th>
+                                        <th width="120">Subtotal</th>
+                                        <th width="50"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="listaProductos">
+                                    {{-- Aquí se agregarán los productos con JS --}}
+                                    <tr id="filaVacia">
+                                        <td colspan="5" class="text-center text-muted p-4">
+                                            Agrega productos al pedido...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                     <div class="card-footer bg-white">
                         <div class="row text-end align-items-center">
@@ -131,23 +133,11 @@
     </div>
 </div>
 
-{{-- SCRIPTS PARA LA LÓGICA DEL FORMULARIO --}}
+{{-- SCRIPTS CORREGIDOS --}}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // 1. Llenar datos de cliente al seleccionar
-        const selectCliente = document.getElementById('cliente_select');
-        selectCliente.addEventListener('change', function() {
-            const selected = this.options[this.selectedIndex];
-            if(this.value) {
-                document.getElementById('nombre_cliente').value = selected.getAttribute('data-nombre');
-                document.getElementById('telefono_cliente').value = selected.getAttribute('data-tel');
-            } else {
-                document.getElementById('nombre_cliente').value = '';
-                document.getElementById('telefono_cliente').value = '';
-            }
-        });
-
-        // 2. Lógica de Productos
+        
+        // --- 1. Lógica de Productos ---
         let totalGlobal = 0;
         let productoIndex = 0;
         const listaProductos = document.getElementById('listaProductos');
@@ -164,13 +154,15 @@
                 agregarFila(id, nombre, precio);
                 
                 // Cerrar modal (Bootstrap 5)
-                const modal = bootstrap.Modal.getInstance(document.getElementById('modalProductos'));
+                const modalEl = document.getElementById('modalProductos');
+                const modal = bootstrap.Modal.getInstance(modalEl);
                 modal.hide();
             });
         });
 
         function agregarFila(id, nombre, precio) {
-            filaVacia.style.display = 'none';
+            // Ocultar fila de "Sin productos"
+            if(filaVacia) filaVacia.style.display = 'none';
 
             const row = document.createElement('tr');
             row.innerHTML = `
@@ -181,12 +173,12 @@
                     <input type="text" name="productos[${productoIndex}][notas]" class="form-control form-control-sm mt-1" placeholder="Nota del producto (ej. Relleno fresa)">
                 </td>
                 <td>
-                    <input type="number" name="productos[${productoIndex}][cantidad]" class="form-control input-cantidad" value="1" min="1" onchange="actualizarFila(this, ${precio})">
+                    <input type="number" name="productos[${productoIndex}][cantidad]" class="form-control input-cantidad text-center" value="1" min="1" onchange="window.actualizarFila(this, ${precio})">
                 </td>
                 <td class="align-middle">$${precio.toFixed(2)}</td>
                 <td class="align-middle fw-bold text-success span-subtotal">$${precio.toFixed(2)}</td>
                 <td class="align-middle text-end">
-                    <button type="button" class="btn btn-sm btn-danger" onclick="eliminarFila(this)"><i class="fas fa-trash"></i></button>
+                    <button type="button" class="btn btn-sm btn-danger" onclick="window.eliminarFila(this)"><i class="fas fa-trash"></i></button>
                 </td>
             `;
             
@@ -195,11 +187,10 @@
             calcularTotales();
         }
 
-        // Hacer funciones globales para que funcionen con onclick inline
+        // Definimos funciones en window para que el onclick del HTML las encuentre
         window.actualizarFila = function(input, precio) {
             const cantidad = parseInt(input.value) || 0;
             const subtotal = cantidad * precio;
-            // Buscar el span de subtotal en la misma fila
             const row = input.closest('tr');
             row.querySelector('.span-subtotal').textContent = '$' + subtotal.toFixed(2);
             calcularTotales();
@@ -207,24 +198,25 @@
 
         window.eliminarFila = function(btn) {
             btn.closest('tr').remove();
-            if(listaProductos.children.length <= 1) { // Solo queda la fila vacía (oculta)
-                filaVacia.style.display = 'table-row';
+            // Si ya no hay filas (o solo queda la oculta si no se borró bien), mostramos el mensaje
+            if(listaProductos.querySelectorAll('tr').length <= 1) { 
+                if(filaVacia) filaVacia.style.display = 'table-row';
             }
             calcularTotales();
         };
 
         function calcularTotales() {
             let suma = 0;
-            document.querySelectorAll('#listaProductos tr').forEach(row => {
-                // Ignorar fila vacía
-                if(row.id === 'filaVacia') return;
-
-                const cantidadInput = row.querySelector('.input-cantidad');
-                if(cantidadInput) {
-                    const cantidad = parseInt(cantidadInput.value);
-                    const precio = parseFloat(row.querySelector('input[type="hidden"][name*="[precio]"]').value);
-                    suma += cantidad * precio;
-                }
+            // Solo sumamos filas que tengan input de cantidad (para ignorar fila vacía)
+            document.querySelectorAll('.input-cantidad').forEach(input => {
+                const cantidad = parseInt(input.value) || 0;
+                // Buscamos el precio en el input hidden hermano del padre o abuelo
+                // Estrategia más segura: buscar en la misma fila TR
+                const row = input.closest('tr');
+                const precioInput = row.querySelector('input[name*="[precio]"]');
+                const precio = parseFloat(precioInput.value) || 0;
+                
+                suma += cantidad * precio;
             });
 
             totalGlobal = suma;
@@ -240,24 +232,33 @@
             spanSaldo.textContent = '$' + (saldo < 0 ? '0.00' : saldo.toFixed(2));
 
             if(saldo < 0) {
-                // Alerta visual si el anticipo es mayor al total
-                inputAnticipo.classList.add('is-invalid');
+                inputAnticipo.classList.add('is-invalid'); // Marca rojo si pagas más del total
             } else {
                 inputAnticipo.classList.remove('is-invalid');
             }
         }
 
         // Recalcular saldo al escribir anticipo
-        inputAnticipo.addEventListener('input', calcularSaldo);
+        if(inputAnticipo) {
+            inputAnticipo.addEventListener('input', calcularSaldo);
+        }
         
         // Filtro buscador modal
-        document.getElementById('buscadorProducto').addEventListener('keyup', function() {
-            const term = this.value.toLowerCase();
-            document.querySelectorAll('#listaOpcionesProductos button').forEach(btn => {
-                const text = btn.textContent.toLowerCase();
-                btn.style.display = text.includes(term) ? 'flex' : 'none';
+        const buscador = document.getElementById('buscadorProducto');
+        if(buscador) {
+            buscador.addEventListener('keyup', function() {
+                const term = this.value.toLowerCase();
+                document.querySelectorAll('#listaOpcionesProductos button').forEach(btn => {
+                    // Buscar en el texto del botón (nombre del producto)
+                    const text = btn.textContent.toLowerCase(); 
+                    if (text.includes(term)) {
+                        btn.style.setProperty('display', 'flex', 'important');
+                    } else {
+                        btn.style.setProperty('display', 'none', 'important');
+                    }
+                });
             });
-        });
+        }
     });
 </script>
 @endsection
