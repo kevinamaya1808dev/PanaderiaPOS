@@ -3,7 +3,7 @@
 @section('content')
 <div class="container">
     
-    {{-- CAMBIO: Barra de Título y Botón Crear (sin card) --}}
+    {{-- Barra de Título y Botón Crear --}}
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="mb-0">Gestión de Empleados</h2>
         
@@ -14,10 +14,9 @@
         @endif
     </div>
 
-    {{-- CAMBIO: Tabla libre en el contenedor --}}
+    {{-- Tabla libre en el contenedor --}}
     <div class="table-responsive">
         
-        {{-- Tabla con estilo cebra y cabecera oscura --}}
         <table class="table table-striped table-hover align-middle">
             <thead class="table-dark">
                 <tr>
@@ -26,7 +25,8 @@
                     <th>Email</th>
                     <th>Cargo</th>
                     <th>Teléfono</th>
-                    <th style="width: 200px;">Acciones</th>
+                    {{-- CAMBIO: Aumentado a 350px para igualar a Cargos --}}
+                    <th style="width: 350px;">Acciones</th>
                 </tr>
             </thead>
             <tbody>
@@ -42,16 +42,28 @@
                         {{ $user->empleado ? $user->empleado->telefono : 'N/A' }}
                     </td>
                     <td>
-                        {{-- Botones de Acción --}}
-                        
-                        {{-- Editar --}}
+                        {{-- CAMBIO DE ORDEN: 1. Nómina, 2. Editar, 3. Eliminar --}}
+                        {{-- Para coincidir visualmente con: Permisos, Editar, Eliminar --}}
+
+                        {{-- 1. Botón de Nómina (Equivalente visual a Permisos) --}}
+                        @if($user->empleado) 
+                            <a href="{{ route('nomina.index', $user->empleado->idEmp) }}" 
+                               class="btn btn-sm btn-info me-1" 
+                               title="Ver Nómina">
+                               <i class="fas fa-file-invoice-dollar me-1"></i> Nómina
+                            </a>
+                        @else
+                            <span class="badge bg-secondary me-1">Sin perfil emp.</span>
+                        @endif
+
+                        {{-- 2. Editar --}}
                         @if (Auth::user()->hasPermissionTo('usuarios', 'editar'))
                             <a href="{{ route('empleados.edit', $user->id) }}" class="btn btn-sm btn-warning me-1" title="Editar">
                                 <i class="fas fa-edit me-1"></i> Editar
                             </a>
                         @endif
                         
-                        {{-- Eliminar (con modal) --}}
+                        {{-- 3. Eliminar (con modal) --}}
                         @if (Auth::user()->hasPermissionTo('usuarios', 'eliminar') && $user->id !== 1 && $user->id !== Auth::id())
                             <button type="button" class="btn btn-sm btn-danger" 
                                     title="Eliminar"
@@ -62,18 +74,6 @@
                                 <i class="fas fa-trash me-1"></i> Eliminar
                             </button>
                         @endif
-                        {{-- Botón de Nómina --}}
-{{-- IMPORTANTE: Verificamos si el usuario tiene un empleado asociado --}}
-@if($user->empleado) 
-    <a href="{{ route('nomina.index', $user->empleado->idEmp) }}" 
-       class="btn btn-sm btn-info me-1" 
-       title="Ver Nómina">
-       <i class="fas fa-file-invoice-dollar me-1"></i> Nómina
-    </a>
-@else
-    {{-- Opcional: Mostrar algo si no es empleado (o dejar vacío) --}}
-    <span class="badge bg-secondary">Sin perfil emp.</span>
-@endif
                     </td>
                 </tr>
                 @empty
@@ -88,7 +88,7 @@
     </div>
 </div>
 
-{{-- Modal de Confirmación de Eliminación --}}
+{{-- Modal de Confirmación de Eliminación (Sin cambios) --}}
 <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -123,7 +123,6 @@
 </div>
 @endsection
 
-{{-- Script para pasar datos al modal --}}
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function () {
