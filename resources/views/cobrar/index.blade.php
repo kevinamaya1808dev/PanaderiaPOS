@@ -277,6 +277,20 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         productosHtml += '</ul>';
 
+        // --- CORRECCIÓN AQUÍ: Determinar Nombre del Cliente ---
+        // Se busca en este orden:
+        // 1. Relación con Cliente (propiedad 'Nombre' mayúscula)
+        // 2. Relación con Cliente (propiedad 'nombre' minúscula)
+        // 3. Propiedad directa en la venta (venta.nombre_cliente)
+        // 4. Fallback a 'Público General'
+        let clienteNombre = 'Público General';
+        
+        if (venta.cliente) {
+            clienteNombre = venta.cliente.Nombre || venta.cliente.nombre || clienteNombre;
+        } else if (venta.nombre_cliente) {
+            clienteNombre = venta.nombre_cliente;
+        }
+
         ventaCard.innerHTML = `
             <div class="card-header bg-warning">
                 <h4 class="mb-0">Venta Pendiente de Pago</h4>
@@ -287,7 +301,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         <h5 class="mb-3">Detalles de la Orden</h5>
                         <p><strong>Folio:</strong> <span id="folio-display">${venta.id}</span></p>
                         <p><strong>Generada por:</strong> <span id="cajero-origen-display">${venta.user.name || 'N/A'}</span></p>
-                        <p><strong>Cliente:</strong> <span id="cliente-display">${venta.cliente ? venta.cliente.Nombre : 'Público General'}</span></p>
+                        
+                        {{-- AQUÍ SE IMPRIME EL NOMBRE CORRECTO --}}
+                        <p><strong>Cliente:</strong> <span id="cliente-display">${clienteNombre}</span></p>
+                        
                         <hr>
                         <h6>Productos:</h6>
                         <div id="productos-list" style="max-height: 200px; overflow-y: auto;">

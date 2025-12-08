@@ -61,6 +61,7 @@ class PermisoController extends Controller
             );
         }
 
-        return redirect()->route('cargos.permisos.index', $cargo)->with('success', 'Permisos del cargo ' . $cargo->nombre . ' actualizados exitosamente.');
+        // CAMBIO AQUÍ: Redireccionar a 'cargos.index' (la lista general) en lugar de quedarse aquí.
+        return redirect()->route('cargos.index')->with('success', 'Permisos del cargo ' . $cargo->nombre . ' actualizados exitosamente.');
     }
 }

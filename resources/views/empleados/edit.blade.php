@@ -31,12 +31,14 @@
                                name="name" 
                                value="{{ old('name', $empleado->name) }}" 
                                autocomplete="off"
-                               required>
+                               required
+                               oninvalid="this.setCustomValidity('Por favor, ingresa el nombre completo.')"
+                               oninput="this.setCustomValidity('')">
                     </div>
                     @error('name') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                 </div>
 
-                {{-- EMAIL (Lógica especial: Visualmente separado, internamente unido) --}}
+                {{-- EMAIL --}}
                 <div class="mb-3">
                     <label for="email_prefix" class="form-label">Usuario de Acceso</label>
                     <div class="input-group">
@@ -48,20 +50,22 @@
                             $emailPrefix = $emailParts[0] ?? ''; 
                         @endphp
 
-                        {{-- Input VISIBLE (solo nombre de usuario) --}}
+                        {{-- Input VISIBLE --}}
                         <input type="text" 
                                class="form-control @error('email') is-invalid @enderror" 
                                id="email_prefix" 
                                name="email_prefix" 
                                value="{{ old('email_prefix', $emailPrefix) }}" 
                                autocomplete="off"
-                               required>
+                               required
+                               oninvalid="this.setCustomValidity('Por favor, ingresa el usuario.')"
+                               oninput="this.setCustomValidity('')">
                                
                         {{-- Parte FIJA --}}
                         <span class="input-group-text bg-light text-secondary fw-bold">@panaderia.com</span>
                     </div>
 
-                    {{-- Input OCULTO (el que se envía a Laravel con el correo completo) --}}
+                    {{-- Input OCULTO --}}
                     <input type="hidden" name="email" id="hidden_email" value="{{ old('email', $empleado->email) }}">
                     
                     <small class="text-muted" style="font-size: 0.8rem;">Modifica el usuario si es necesario (el dominio es fijo).</small>
@@ -69,21 +73,20 @@
                     @error('email') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                 </div>
 
-                {{-- CARGO (ROL) - Lógica corregida --}}
+                {{-- CARGO (ROL) --}}
                 <div class="mb-3">
                     <label for="cargo_id" class="form-label">Cargo (Rol)</label>
                     <div class="input-group">
                         <span class="input-group-text"><i class="fas fa-user-tag fa-fw"></i></span>
-                        <select class="form-select @error('cargo_id') is-invalid @enderror" id="cargo_id" name="cargo_id" required>
+                        <select class="form-select @error('cargo_id') is-invalid @enderror" 
+                                id="cargo_id" 
+                                name="cargo_id" 
+                                required
+                                oninvalid="this.setCustomValidity('Selecciona un cargo.')"
+                                oninput="this.setCustomValidity('')">
                             <option value="" disabled>Seleccione un Cargo</option>
                             
                             @foreach ($cargos as $cargo)
-                                {{-- 
-                                    CONDICIÓN CORREGIDA:
-                                    Se muestra si NO es 'Super Administrador'
-                                    O
-                                    Si el empleado actual YA TIENE ese cargo (para no perderlo al editar)
-                                --}}
                                 @if($cargo->nombre !== 'Super Administrador' || $empleado->cargo_id == $cargo->id)
                                     <option value="{{ $cargo->id }}" {{ old('cargo_id', $empleado->cargo_id) == $cargo->id ? 'selected' : '' }}>
                                         {{ $cargo->nombre }}
@@ -106,11 +109,29 @@
                                name="password" 
                                autocomplete="new-password"
                                aria-describedby="passwordHelp">
+                        
+                        {{-- BOTÓN DE OJO --}}
+                        <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                            <i class="fas fa-eye"></i>
+                        </button>
                     </div>
                     <div id="passwordHelp" class="form-text">Dejar en blanco para conservar la contraseña actual.</div>
-                    @error('password') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+                    
+                    {{-- TRADUCCIÓN DE ERRORES DEL SERVIDOR (Aquí está el truco para que salga en español) --}}
+                    @error('password') 
+                        <div class="invalid-feedback d-block">
+                            @if(str_contains($message, 'match'))
+                                Las contraseñas no coinciden.
+                            @elseif(str_contains($message, 'characters'))
+                                La contraseña debe tener al menos 8 caracteres.
+                            @else
+                                {{ $message }}
+                            @endif
+                        </div> 
+                    @enderror
                 </div>
 
+                {{-- CONFIRMAR CONTRASEÑA --}}
                 <div class="mb-3">
                     <label for="password_confirmation" class="form-label">Confirmar Nueva Contraseña</label>
                     <div class="input-group">
@@ -120,6 +141,11 @@
                                id="password_confirmation" 
                                name="password_confirmation"
                                autocomplete="new-password">
+
+                        {{-- BOTÓN DE OJO CONFIRMACIÓN --}}
+                        <button class="btn btn-outline-secondary" type="button" id="toggleConfirmPassword">
+                            <i class="fas fa-eye"></i>
+                        </button>
                     </div>
                 </div>
                 
@@ -145,6 +171,8 @@
                     @error('direccion') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                 </div>
                 
+                {{-- (SE ELIMINÓ EL CAMPO FECHA DE CONTRATACIÓN) --}}
+
                 {{-- Botones de Acción --}}
                 <div class="d-flex justify-content-between mt-4">
                     <a href="{{ route('empleados.index') }}" class="btn btn-secondary">
@@ -164,28 +192,45 @@
     </div>
 </div>
 
-{{-- SCRIPT PARA UNIR EL CORREO AUTOMÁTICAMENTE --}}
+{{-- SCRIPT: EMAIL + TOGGLE PASSWORD --}}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const emailPrefixInput = document.getElementById('email_prefix');
         const hiddenEmailInput = document.getElementById('hidden_email');
         const dominio = '@panaderia.com';
 
-        // Función que actualiza el campo oculto
+        // 1. Función email
         function updateFullEmail() {
             if(emailPrefixInput.value) {
-                // Toma lo escrito y le pega el dominio
                 hiddenEmailInput.value = emailPrefixInput.value.trim() + dominio;
             } else {
                 hiddenEmailInput.value = '';
             }
         }
 
-        // Escuchar cada vez que el usuario escribe
+        // 2. Función Ojo (Toggle Password)
+        function setupPasswordToggle(inputId, buttonId) {
+            const input = document.getElementById(inputId);
+            const button = document.getElementById(buttonId);
+            
+            if(input && button){
+                button.addEventListener('click', function() {
+                    const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+                    input.setAttribute('type', type);
+                    
+                    const icon = this.querySelector('i');
+                    icon.classList.toggle('fa-eye');
+                    icon.classList.toggle('fa-eye-slash');
+                });
+            }
+        }
+
+        // Inicializar
         emailPrefixInput.addEventListener('input', updateFullEmail);
-        
-        // Ejecutar al cargar la página para asegurar que el input oculto tenga valor
         updateFullEmail();
+
+        setupPasswordToggle('password', 'togglePassword');
+        setupPasswordToggle('password_confirmation', 'toggleConfirmPassword');
     });
 </script>
 @endsection

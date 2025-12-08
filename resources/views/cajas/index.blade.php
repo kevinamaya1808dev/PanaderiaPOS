@@ -151,11 +151,15 @@
                 
                 {{-- TABLA 1: VENTAS --}}
                 <div class="card shadow-lg mb-4">
-                    <div class="card-header bg-info text-white">
+                    {{-- CAMBIO: Agregado d-flex y el Badge de Total --}}
+                    <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
                         <h4 class="mb-0"><i class="fas fa-shopping-cart me-2"></i> Ventas del Turno</h4>
+                        @php $listaVentas = $ventasDelTurno ?? $ventas ?? collect([]); @endphp
+                        <span class="badge bg-white text-info fs-6">
+                            Total: ${{ number_format($listaVentas->sum('total'), 2) }}
+                        </span>
                     </div>
                     <div class="card-body p-0">
-                         @php $listaVentas = $ventasDelTurno ?? $ventas ?? collect([]); @endphp
                         @if($listaVentas->isEmpty())
                             <div class="p-4 text-center text-muted">No hay ventas registradas.</div>
                         @else
@@ -172,7 +176,6 @@
                                     <tbody>
                                         @foreach($listaVentas as $venta)
                                             <tr>
-                                                {{-- CAMBIO AQUI: Quitamos H:i para dejar solo fecha --}}
                                                 <td style="font-size: 0.9rem;">
                                                     {{ \Carbon\Carbon::parse($venta->fecha_hora)->format('d/m/Y') }}
                                                 </td>
@@ -198,8 +201,12 @@
 
                {{-- TABLA 2: ANTICIPOS --}}
                 <div class="card shadow-lg">
-                    <div class="card-header bg-warning text-dark">
+                    {{-- CAMBIO: Agregado d-flex y el Badge de Total --}}
+                    <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
                         <h4 class="mb-0"><i class="fas fa-clock me-2"></i> Anticipos / Apartados</h4>
+                        <span class="badge bg-white text-dark fs-6">
+                            Total: ${{ number_format(isset($anticipos) ? $anticipos->sum('monto') : 0, 2) }}
+                        </span>
                     </div>
                     <div class="card-body p-0">
                         @if(!isset($anticipos) || $anticipos->isEmpty())
@@ -218,7 +225,6 @@
                                     <tbody>
                                         @foreach($anticipos as $anticipo)
                                             <tr>
-                                                {{-- CAMBIO AQUI: Quitamos H:i para dejar solo fecha --}}
                                                 <td>{{ $anticipo->created_at->format('d/m/Y') }}</td>
                                                 
                                                 <td>
@@ -252,6 +258,7 @@
                 <div class="card shadow-lg">
                     <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
                         <h4 class="mb-0"><i class="fas fa-money-bill-wave me-2"></i> Gastos y Salidas de Efectivo</h4>
+                        {{-- Este ya estaba bien --}}
                         <span class="badge bg-white text-danger fs-6">Total: ${{ number_format($totalGastos ?? 0, 2) }}</span>
                     </div>
 
@@ -271,7 +278,6 @@
                                     <tbody>
                                         @foreach($gastos as $gasto)
                                             <tr>
-                                                {{-- Aquí ya lo tenías bien (solo fecha) --}}
                                                 <td class="ps-4 fw-bold text-secondary">
                                                     {{ $gasto->created_at->format('d/m/Y') }}
                                                 </td>

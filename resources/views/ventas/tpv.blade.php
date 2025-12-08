@@ -7,27 +7,59 @@
         <div class="row h-100">
             <div class="col-lg-8 d-flex flex-column h-100">
                 <h4 class="mb-3 text-primary"><i class="fas fa-bread-slice me-2"></i> Productos Disponibles</h4>
+                
+                {{-- BUSCADOR --}}
                 <div class="input-group mb-3 shadow-sm">
                     <span class="input-group-text"><i class="fas fa-search"></i></span>
                     <input type="search" id="product-search" class="form-control" placeholder="Buscar producto por nombre...">
                 </div>
-                <div class="d-flex mb-3 overflow-auto pb-2 border-bottom">
-                    <button class="btn btn-sm btn-outline-dark me-2 active category-filter" data-category-id="all">Todas</button>
-                    @foreach ($categorias as $cat)
-                        <button class="btn btn-sm btn-outline-secondary me-2 category-filter" data-category-id="{{ $cat->id }}">{{ $cat->nombre }}</button>
-                    @endforeach
+
+                {{-- BARRA DE FILTROS CORREGIDA (Para que el menú no se corte) --}}
+                <div class="d-flex mb-3 pb-2 border-bottom align-items-center">
+                    
+                    {{-- 1. BOTÓN DE PRECIOS (Fijo a la izquierda) --}}
+                    <div class="dropdown me-2">
+                        <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" id="dropdownPrecios" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="fas fa-tags"></i> Precios
+                        </button>
+                        {{-- z-index alto para asegurar que se vea al frente --}}
+                        <ul class="dropdown-menu shadow" aria-labelledby="dropdownPrecios" style="max-height: 300px; overflow-y: auto; z-index: 1050;">
+                            <li><a class="dropdown-item price-filter active" href="#" data-price="all">Todos los precios</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            {{-- Lógica para obtener precios únicos --}}
+                            @foreach ($productos->pluck('precio')->unique()->sort() as $precioUnico)
+                                <li>
+                                    <a class="dropdown-item price-filter" href="#" data-price="{{ $precioUnico }}">
+                                        ${{ number_format($precioUnico, 2) }}
+                                    </a>
+                                </li>
+                            @endforeach
+                        </ul>
+                    </div>
+
+                    {{-- Separador vertical visual --}}
+                    <div class="vr me-2"></div>
+
+                    {{-- 2. CATEGORÍAS (Contenedor con Scroll Horizontal independiente) --}}
+                    <div class="d-flex overflow-auto flex-grow-1">
+                        <button class="btn btn-sm btn-outline-dark me-2 active category-filter" data-category-id="all">Todas</button>
+                        @foreach ($categorias as $cat)
+                            <button class="btn btn-sm btn-outline-secondary me-2 category-filter" data-category-id="{{ $cat->id }}" style="white-space: nowrap;">{{ $cat->nombre }}</button>
+                        @endforeach
+                    </div>
                 </div>
                 
-                {{-- Contenedor de productos --}}
+                {{-- CONTENEDOR DE PRODUCTOS --}}
                 <div class="row g-3 overflow-auto p-2 border rounded shadow-sm bg-white" id="product-list" style="max-height: calc(100vh - 220px);">
                     @forelse ($productos as $producto)
                         <div class="col-4 col-sm-3 col-md-2 product-item" data-category-id="{{ $producto->categoria_id }}">
                             
+                            {{-- Agregamos data-price aquí para que JS lo lea --}}
                             <div class="card h-100 product-card shadow-sm border-0" 
                                  style="cursor: pointer;"
                                  data-id="{{ $producto->id }}" 
                                  data-name="{{ $producto->nombre }}" 
-                                 data-price="{{ $producto->precio }}"
+                                 data-price="{{ $producto->precio }}" 
                                  data-costo="{{ $producto->costo ?? 0 }}"
                                  data-stock="{{ $producto->inventario->stock ?? 0 }}"
                                  data-image="{{ $producto->imagen ? asset('storage/' . $producto->imagen) : 'https://placehold.co/100x100/EBF5FB/333333?text=Sin+Imagen' }}">
@@ -54,6 +86,7 @@
                 </div>
             </div>
 
+            {{-- COLUMNA DERECHA (CARRITO) --}}
             <div class="col-lg-4 d-flex flex-column border-start ps-4 h-100">
                 <h4 class="mb-3 text-danger"><i class="fas fa-shopping-cart me-2"></i> Orden Actual</h4>
                 
@@ -64,7 +97,6 @@
                     <div class="d-flex align-items-center">
                         <small class="me-2">Cliente:</small> 
                         <div class="input-group input-group-sm flex-grow-1">
-                            {{-- CORRECCIÓN 1: autocomplete="off" para evitar molestias del navegador --}}
                             <input type="text" id="temporal-client-name" class="form-control" placeholder="Público General" autocomplete="off">
                             <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" title="Seleccionar Cliente Existente"></button>
                             <ul class="dropdown-menu dropdown-menu-end" id="client-dropdown-menu" style="max-height: 200px; overflow-y: auto;">
@@ -75,12 +107,10 @@
                     </div>
                </div>
                 
-                {{-- Carrito y Pago --}}
                 <div id="cart" class="flex-grow-1 overflow-auto border rounded p-3 mb-3 bg-light shadow-sm">
                         <p class="text-center text-muted empty-cart-message">Añada productos para comenzar la venta.</p>
                 </div>
                 <div class="border-top pt-3">
-                    {{-- Resumen Total --}}
                     <div class="d-flex justify-content-between fw-bold mb-1">
                         <span>SUBTOTAL:</span>
                         <span id="subtotal">$0.00</span>
@@ -89,7 +119,7 @@
                         <span>TOTAL A PAGAR:</span>
                         <span id="total">$0.00</span>
                     </div>
-                    {{-- Botones --}}
+                    
                     <button id="process-payment" class="btn btn-success btn-lg w-100 mb-2 disabled" data-bs-toggle="modal" data-bs-target="#paymentModal">
                         <i class="fas fa-dollar-sign me-2"></i> Cobrar Ahora
                     </button>
@@ -131,8 +161,6 @@
                     <label class="form-label fs-5">Total a Pagar:</label>
                     <div class="fs-1 fw-bolder text-danger" id="modal-total-display">$0.00</div>
                 </div>
-                
-                {{-- Método de Pago --}}
                 <div class="mb-3">
                     <label for="modal-metodo-pago" class="form-label fw-bold">Método de Pago</label>
                     <select class="form-select form-select-lg" id="modal-metodo-pago">
@@ -140,8 +168,6 @@
                         <option value="tarjeta">Tarjeta</option> 
                     </select>
                 </div>
-                
-                {{-- Grupo para Efectivo --}}
                 <div id="efectivo-fields"> 
                     <div class="mb-3" id="monto-recibido-group">
                         <label for="modal-monto-recibido" class="form-label fw-bold">Monto Recibido</label>
@@ -155,13 +181,10 @@
                         <div class="fs-2 fw-bold text-info" id="modal-cambio-display">$0.00</div>
                     </div>
                 </div>
-
-                {{-- Grupo para Tarjeta (Folio) --}}
                 <div class="mb-3" id="tarjeta-fields" style="display: none;"> 
                     <label for="modal-folio-pago" class="form-label fw-bold">Folio / Autorización</label>
                     <input type="text" class="form-control form-control-lg" id="modal-folio-pago" placeholder="Ingrese N° de autorización">
                 </div>
-                
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -172,8 +195,6 @@
         </div>
     </div>
 </div>
-{{-- ***** FIN MODAL DE PAGO ***** --}}
-
 
 {{-- MODAL DE CONFIRMACIÓN --}}
 <div class="modal fade" id="confirmationModal" tabindex="-1" aria-labelledby="confirmationModalLabel" aria-hidden="true">
@@ -183,9 +204,7 @@
                 <h5 class="modal-title" id="confirmationModalTitle">Confirmación</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body" id="confirmationModalBody">
-                ¿Estás seguro?
-            </div>
+            <div class="modal-body" id="confirmationModalBody">¿Estás seguro?</div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="fas fa-times me-1"></i> Cerrar
@@ -206,9 +225,7 @@
                 <h5 class="modal-title" id="alertModalTitle">Alerta</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body" id="alertModalBody">
-                ...
-            </div>
+            <div class="modal-body" id="alertModalBody">...</div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
             </div>
@@ -216,12 +233,8 @@
     </div>
 </div>
 
-
-{{-- ***** IFRAME OCULTO PARA IMPRESIÓN ***** --}}
-<iframe id="print-frame" name="printFrame" 
-    style="position: absolute; top: -9999px; left: -9999px; width: 1px; height: 1px; visibility: hidden; border: 0;">
-</iframe>
-
+{{-- IFRAME OCULTO --}}
+<iframe id="print-frame" name="printFrame" style="position: absolute; top: -9999px; left: -9999px; width: 1px; height: 1px; visibility: hidden; border: 0;"></iframe>
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -229,7 +242,8 @@
         const cart = {}; 
         let selectedClientId = null; 
         let currentCategoryId = 'all'; 
-        // NOTA: Asegúrate de que tu variable clientes venga completa desde el controlador
+        let currentPriceFilter = 'all'; // NUEVA VARIABLE PARA FILTRAR PRECIO
+
         const clients = @json($clientes ?? []); 
         
         // Referencias del DOM
@@ -243,9 +257,15 @@
         const productListDiv = document.getElementById('product-list');
         const categoryFilters = document.querySelectorAll('.category-filter');
         const searchInput = document.getElementById('product-search'); 
+        
+        // NUEVAS REFERENCIAS (FILTRO PRECIO)
+        const priceFilters = document.querySelectorAll('.price-filter');
+        const dropdownPreciosBtn = document.getElementById('dropdownPrecios');
+
         const csrfToken = document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').content : '';
         const emptyCartMessageHTML = '<p class="text-center text-muted empty-cart-message">Añada productos para comenzar la venta.</p>';
         
+        // Modal Pago Refs
         const paymentModalElement = document.getElementById('paymentModal');
         let paymentModal = null;
         if (paymentModalElement && typeof bootstrap !== 'undefined') { 
@@ -262,6 +282,7 @@
         const printFrame = document.getElementById('print-frame');
         const btnGenerarTicket = document.getElementById('btn-generar-ticket'); 
         
+        // Modal Confirmación Refs
         const confirmationModalElement = document.getElementById('confirmationModal');
         let confirmationModal = null;
         if (confirmationModalElement && typeof bootstrap !== 'undefined') {
@@ -272,6 +293,7 @@
         const confirmationModalConfirmButton = document.getElementById('confirmationModalConfirmButton');
         const confirmationModalHeader = document.getElementById('confirmationModalHeader');
 
+        // Modal Alerta Refs
         const alertModalElement = document.getElementById('alertModal');
         let alertModal = null;
         if (alertModalElement && typeof bootstrap !== 'undefined') {
@@ -437,44 +459,84 @@
             }); 
         }
 
-        // Filtros de Producto
+        // ============================================
+        // FILTROS DE PRODUCTO (CATEGORÍA + PRECIO)
+        // ============================================
         function filterProducts() { 
             const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : ''; 
             const productItems = productListDiv ? productListDiv.querySelectorAll('.product-item') : [];
+            
             productItems.forEach(item => {
                 const productNameElement = item.querySelector('.product-name');
                 const productName = productNameElement ? productNameElement.textContent.toLowerCase() : '';
                 const itemCategoryId = item.dataset.categoryId;
+                // LEER PRECIO DESDE HTML
+                const itemPrice = parseFloat(item.querySelector('.product-card').dataset.price);
+
                 const categoryMatch = (currentCategoryId === 'all' || itemCategoryId === currentCategoryId);
                 const searchMatch = (searchTerm === '' || productName.includes(searchTerm));
-                item.style.display = (categoryMatch && searchMatch) ? 'block' : 'none'; 
+                
+                // LOGICA DE PRECIO
+                let priceMatch = true;
+                if(currentPriceFilter !== 'all'){
+                    // Comparar flotantes con pequeño margen
+                    priceMatch = Math.abs(itemPrice - parseFloat(currentPriceFilter)) < 0.01;
+                }
+
+                item.style.display = (categoryMatch && searchMatch && priceMatch) ? 'block' : 'none'; 
             });
         }
+        
+        // Filtro Categoría
         categoryFilters.forEach(button => { 
             button.addEventListener('click', function() {
                 categoryFilters.forEach(btn => {btn.classList.remove('active', 'btn-outline-dark'); btn.classList.add('btn-outline-secondary');});
                 this.classList.add('active', 'btn-outline-dark');
                 this.classList.remove('btn-outline-secondary');
-                currentCategoryId = this.dataset.categoryId;
+                currentCategoryId = this.dataset.categoryId; 
                 filterProducts(); 
             });
         });
+
+        // NUEVO: Filtro Precio
+        if(priceFilters) {
+            priceFilters.forEach(item => {
+                item.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    // Actualizar estilos dropdown
+                    priceFilters.forEach(pf => pf.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Actualizar filtro
+                    currentPriceFilter = this.dataset.price;
+                    
+                    // Cambiar texto boton (UX)
+                    if(dropdownPreciosBtn) {
+                        if(currentPriceFilter === 'all') {
+                            dropdownPreciosBtn.innerHTML = '<i class="fas fa-tags"></i> Precios';
+                        } else {
+                            dropdownPreciosBtn.innerHTML = '<i class="fas fa-tag"></i> ' + this.innerText;
+                        }
+                    }
+                    
+                    filterProducts();
+                });
+            });
+        }
+
         if (searchInput) { searchInput.addEventListener('input', filterProducts); }
 
         // ==========================================================
-        // LÓGICA CLIENTES Y DROPDOWN (CORREGIDA)
+        // LÓGICA CLIENTES Y DROPDOWN
         // ==========================================================
         
-        // 1. Llenar el dropdown inicialmente
         function populateClientDropdown() { 
             if (!clientDropdownMenu) return; 
-            // Limpiar todo menos las opciones fijas si las hubiera (aqui limpiamos todo lo dinámico)
             const items = clientDropdownMenu.querySelectorAll('li:not(:first-child):not(:nth-child(2))');
             items.forEach(item => item.remove());
 
             if (clients && clients.length > 0) { 
                 clients.forEach(client => {
-                    // NOTA: Usamos client.idCli y client.Nombre según tu código original
                     if (client.idCli !== 1) { 
                         const li = document.createElement('li');
                         const a = document.createElement('a');
@@ -494,7 +556,6 @@
             }
         }
 
-        // 2. Manejar la selección de cliente
         function updateSelectedClient(id, name) { 
             selectedClientId = id ? parseInt(id) : null;
             if(temporalClientInput){
@@ -507,7 +568,6 @@
             }
         }
 
-        // 3. Eventos del Dropdown (Click en un cliente)
         if(clientDropdownMenu){ 
             clientDropdownMenu.addEventListener('click', function(e) { 
                 e.preventDefault();
@@ -519,9 +579,7 @@
             }); 
         }
 
-        // 4. BUSCADOR EN TIEMPO REAL (CORREGIDO)
         if(temporalClientInput){ 
-            // Mostrar dropdown al hacer click
             temporalClientInput.addEventListener('click', function(){
                  if(typeof bootstrap !== 'undefined'){
                     const dropdownToggle = this.nextElementSibling;
@@ -530,39 +588,33 @@
                  }
             });
 
-            // Filtrar al escribir
             temporalClientInput.addEventListener('input', function() { 
                 const typedName = this.value.toLowerCase().trim();
                 
-                // Asignar lógica de ID base si existe match exacto
                 const existingClient = clients.find(c => c.Nombre.toLowerCase() === typedName);
                 selectedClientId = existingClient ? existingClient.idCli : null; 
 
-                // Mostrar el menú si estamos escribiendo
                 if(typeof bootstrap !== 'undefined'){
                      const dropdownToggle = this.nextElementSibling;
                      const dropdownInstance = bootstrap.Dropdown.getOrCreateInstance(dropdownToggle);
                      dropdownInstance.show();
                 }
 
-                // Filtrar items visualmente
                 const listItems = clientDropdownMenu.querySelectorAll('li');
                 listItems.forEach(li => {
-                    // Ignorar separadores o items fijos
                     const link = li.querySelector('a.select-client');
                     if(link){
                         const name = link.dataset.clientName.toLowerCase();
                         if(name.includes(typedName)){
-                            li.style.display = ''; // Mostrar
+                            li.style.display = ''; 
                         } else {
-                            li.style.display = 'none'; // Ocultar
+                            li.style.display = 'none'; 
                         }
                     }
                 });
             }); 
         }
 
-        // Cancelar Orden
         if(cancelButton){ 
             cancelButton.addEventListener('click', function() { 
                 if (Object.keys(cart).length > 0) {
@@ -636,7 +688,6 @@
             }
         }
         
-        // Procesar Pago
         if (confirmPaymentBtn) { 
             confirmPaymentBtn.addEventListener('click', async function() { 
                 if (Object.keys(cart).length === 0 || !totalSpan) return;
@@ -725,14 +776,14 @@
                     'btn-primary',
                     async function() { 
                         const detalles = Object.keys(cart).map(id => ({ 
-                        producto_id: id, 
-                        cantidad: cart[id].qty, 
-                        precio_unitario: cart[id].price, 
-                        costo_unitario: cart[id].cost,
-                        importe: cart[id].price * cart[id].qty 
-                    }));
+                            producto_id: id, 
+                            cantidad: cart[id].qty, 
+                            precio_unitario: cart[id].price, 
+                            costo_unitario: cart[id].cost,
+                            importe: cart[id].price * cart[id].qty 
+                        }));
                         const total = parseFloat(totalSpan.textContent.replace('$', ''));
-                        const payload = {
+                        const payload = { 
                             _token: csrfToken, 
                             cliente_id: selectedClientId, 
                             metodo_pago: 'pendiente', 

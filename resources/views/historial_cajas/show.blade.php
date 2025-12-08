@@ -16,7 +16,6 @@
     </div>
 
     <div class="row mb-4">
-        <!-- Columna Izquierda: Información General -->
         <div class="col-md-4 mb-4 mb-md-0">
             <div class="card shadow-sm h-100">
                 <div class="card-header bg-light fw-bold">Datos del Empleado</div>
@@ -41,7 +40,6 @@
             </div>
         </div>
 
-        <!-- Columna Derecha: Resumen Financiero -->
         <div class="col-md-8">
             <div class="card shadow-sm h-100">
                 <div class="card-header bg-success text-white fw-bold">Balance del Turno</div>
@@ -55,7 +53,16 @@
                         <div class="col-6 text-end fw-bold text-success fs-5">${{ number_format($totalVentasEfectivo, 2) }}</div>
                     </div>
                     
-                    {{-- SE ELIMINÓ LA FILA DE ENTRADAS MANUALES --}}
+                    {{-- AGREGADO VISUAL: Anticipos en el Balance General también --}}
+                    @php 
+                        $totalAnticipos = isset($anticipos) ? $anticipos->sum('monto') : 0; 
+                    @endphp
+                    @if($totalAnticipos > 0)
+                    <div class="row mb-3 align-items-center">
+                        <div class="col-6"><span class="text-success fs-5">(+) Anticipos:</span></div>
+                        <div class="col-6 text-end fw-bold text-success fs-5">${{ number_format($totalAnticipos, 2) }}</div>
+                    </div>
+                    @endif
 
                     <div class="row mb-3 align-items-center">
                         <div class="col-6"><span class="text-danger fs-5">(-) Salidas/Gastos:</span></div>
@@ -65,8 +72,8 @@
                     <div class="row align-items-center">
                         <div class="col-6"><h3 class="mb-0 text-dark">Total en Caja:</h3><small class="text-muted">(Debe coincidir con físico)</small></div>
                         <div class="col-6 text-end">
-                            {{-- CAMBIO: Se quitó + $ingresos de la fórmula --}}
-                            @php $calculado = $caja->saldo_inicial + $totalVentasEfectivo - $egresos; @endphp
+                            {{-- FÓRMULA: Inicial + Ventas + Anticipos - Gastos --}}
+                            @php $calculado = $caja->saldo_inicial + $totalVentasEfectivo + $totalAnticipos - $egresos; @endphp
                             <h2 class="mb-0 fw-bold text-dark">${{ number_format($calculado, 2) }}</h2>
                         </div>
                     </div>
@@ -79,7 +86,8 @@
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-header bg-primary text-white fw-bold d-flex justify-content-between align-items-center">
             <span><i class="fas fa-shopping-cart me-2"></i> Ventas del Turno</span>
-            <span class="badge bg-white text-primary">{{ $ventas->count() }} Registros</span>
+            {{-- CAMBIO: Mostrar TOTAL DINERO en lugar de conteo --}}
+            <span class="badge bg-white text-primary fs-6">Total: ${{ number_format($ventas->sum('total'), 2) }}</span>
         </div>
         <div class="card-body p-0">
             @if($ventas->isEmpty())
@@ -129,15 +137,60 @@
         </div>
     </div>
 
-    {{-- 2. TABLA DE GASTOS (Solo Egresos) --}}
+    {{-- 2. TABLA DE ANTICIPOS / APARTADOS --}}
     <div class="card shadow-sm border-0 mb-4">
-        <div class="card-header bg-danger text-white fw-bold">
-            <i class="fas fa-money-bill-wave me-2"></i> Gastos del Turno
+        <div class="card-header bg-warning text-dark fw-bold d-flex justify-content-between align-items-center">
+            <span><i class="fas fa-clock me-2"></i> Anticipos / Apartados</span>
+            {{-- CAMBIO: Mostrar TOTAL DINERO en lugar de conteo --}}
+            <span class="badge bg-white text-dark fs-6">
+                Total: ${{ number_format(isset($anticipos) ? $anticipos->sum('monto') : 0, 2) }}
+            </span>
         </div>
         <div class="card-body p-0">
-            {{-- Filtramos solo los egresos --}}
-            @php $gastos = $movimientos->where('tipo', 'egreso'); @endphp
+            @if(!isset($anticipos) || $anticipos->isEmpty())
+                <p class="text-center p-4 text-muted">No se registraron anticipos en este turno.</p>
+            @else
+                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                    <table class="table table-hover table-striped mb-0">
+                        <thead class="bg-light sticky-top">
+                            <tr>
+                                <th class="ps-4">Fecha</th>
+                                <th>Referencia</th>
+                                <th>Monto</th>
+                                <th>Método</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($anticipos as $anticipo)
+                                <tr>
+                                    <td class="ps-4">{{ $anticipo->created_at->format('d/m/y') }}</td>
+                                    <td>Pedido #{{ $anticipo->pedido_id }}</td>
+                                    <td class="fw-bold text-success">+${{ number_format($anticipo->monto, 2) }}</td>
+                                    <td>
+                                        <span class="badge {{ strtolower($anticipo->metodo_pago) == 'efectivo' ? 'bg-success' : 'bg-secondary' }}">
+                                            {{ ucfirst($anticipo->metodo_pago) }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @endif
+        </div>
+    </div>
 
+    {{-- 3. TABLA DE GASTOS (Solo Egresos) --}}
+    <div class="card shadow-sm border-0 mb-4">
+        {{-- Filtramos solo los egresos primero para poder sumar --}}
+        @php $gastos = $movimientos->where('tipo', 'egreso'); @endphp
+
+        <div class="card-header bg-danger text-white fw-bold d-flex justify-content-between align-items-center">
+            <span><i class="fas fa-money-bill-wave me-2"></i> Gastos del Turno</span>
+            {{-- CAMBIO: Agregado el Total aquí también --}}
+            <span class="badge bg-white text-danger fs-6">Total: ${{ number_format($gastos->sum('monto'), 2) }}</span>
+        </div>
+        <div class="card-body p-0">
             @if($gastos->isEmpty())
                 <p class="text-center p-4 text-muted">No hay gastos registrados.</p>
             @else

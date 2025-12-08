@@ -14,7 +14,7 @@
             <form action="{{ route('empleados.store') }}" method="POST" autocomplete="off" id="formEmpleado">
                 @csrf
 
-                {{-- NOMBRE DEL EMPLEADO (Siempre visible) --}}
+                {{-- NOMBRE DEL EMPLEADO --}}
                 <div class="mb-4">
                     <label for="name" class="form-label fw-bold">Nombre Completo</label>
                     <div class="input-group">
@@ -26,7 +26,9 @@
                                value="{{ old('name') }}" 
                                placeholder="Ej. Juan Pérez"
                                autocomplete="off" 
-                               required>
+                               required
+                               oninvalid="this.setCustomValidity('Por favor, ingresa el nombre completo.')"
+                               oninput="this.setCustomValidity('')">
                     </div>
                     @error('name') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                 </div>
@@ -35,7 +37,6 @@
                 <div class="card bg-light mb-4 border-0">
                     <div class="card-body py-3">
                         <div class="form-check form-switch">
-                            {{-- Si hubo error y estaba marcado, mantenerlo marcado con old() --}}
                             <input class="form-check-input" type="checkbox" id="checkAcceso" name="requiere_acceso" value="1" {{ old('requiere_acceso') ? 'checked' : '' }}>
                             <label class="form-check-label fw-bold text-primary" for="checkAcceso">
                                 <i class="fas fa-key me-1"></i> ¿Dar acceso al sistema?
@@ -48,33 +49,30 @@
                     </div>
                 </div>
 
-                {{-- ÁREA DE LOGIN (Se oculta/muestra con JS) --}}
+                {{-- ÁREA DE LOGIN --}}
                 <div id="areaLogin" style="display: none;">
                     <h6 class="text-muted">Credenciales de Acceso</h6>
                     <hr class="mt-1 mb-3 border-secondary">
 
-                    {{-- EMAIL (USUARIO) --}}
+                    {{-- EMAIL --}}
                     <div class="mb-3">
                         <label for="email_prefix" class="form-label">Usuario de Acceso</label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="fas fa-envelope fa-fw"></i></span>
                             
-                            {{-- Input visual --}}
                             <input type="text" 
                                    class="form-control @error('email') is-invalid @enderror" 
                                    id="email_prefix" 
                                    name="email_prefix" 
                                    value="{{ old('email_prefix') }}" 
                                    placeholder="ej. juan.perez"
-                                   autocomplete="off">
+                                   autocomplete="off"
+                                   oninvalid="this.setCustomValidity('Por favor, ingresa el usuario.')"
+                                   oninput="this.setCustomValidity('')">
                             
-                            {{-- Parte fija --}}
                             <span class="input-group-text bg-light text-secondary fw-bold">@panaderia.com</span>
                         </div>
-
-                        {{-- Input OCULTO real --}}
                         <input type="hidden" name="email" id="hidden_email" value="{{ old('email') }}">
-
                         <small class="text-muted" style="font-size: 0.8rem;">El dominio se agrega automáticamente.</small>
                         
                         @error('email') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
@@ -91,9 +89,28 @@
                                    id="password" 
                                    name="password" 
                                    placeholder="Mínimo 8 caracteres"
-                                   autocomplete="new-password">
+                                   autocomplete="new-password"
+                                   oninvalid="this.setCustomValidity('Completa este campo (mínimo 8 caracteres).')"
+                                   oninput="this.setCustomValidity('')">
+                            
+                            {{-- BOTÓN DE OJO --}}
+                            <button class="btn btn-outline-secondary" type="button" id="togglePassword">
+                                <i class="fas fa-eye"></i>
+                            </button>
                         </div>
-                        @error('password') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+                        
+                        {{-- Traducción manual del error --}}
+                        @error('password') 
+                            <div class="invalid-feedback d-block">
+                                @if(str_contains($message, 'match'))
+                                    Las contraseñas no coinciden.
+                                @elseif(str_contains($message, 'characters'))
+                                    La contraseña debe tener al menos 8 caracteres.
+                                @else
+                                    {{ $message }}
+                                @endif
+                            </div> 
+                        @enderror
                     </div>
 
                     {{-- CONFIRMAR CONTRASEÑA --}}
@@ -105,18 +122,30 @@
                                    class="form-control" 
                                    id="password_confirmation" 
                                    name="password_confirmation" 
-                                   autocomplete="new-password">
+                                   autocomplete="new-password"
+                                   oninvalid="this.setCustomValidity('Por favor, confirma la contraseña.')"
+                                   oninput="this.setCustomValidity('')">
+
+                            {{-- BOTÓN DE OJO CONFIRMACIÓN --}}
+                            <button class="btn btn-outline-secondary" type="button" id="toggleConfirmPassword">
+                                <i class="fas fa-eye"></i>
+                            </button>
                         </div>
                     </div>
                 </div>
                 {{-- FIN ÁREA LOGIN --}}
 
-                {{-- CARGO (Siempre visible, todos tienen puesto) --}}
+                {{-- CARGO --}}
                 <div class="mb-3">
                     <label for="cargo_id" class="form-label">Cargo / Puesto</label>
                     <div class="input-group">
                         <span class="input-group-text"><i class="fas fa-user-tag fa-fw"></i></span>
-                        <select class="form-select @error('cargo_id') is-invalid @enderror" id="cargo_id" name="cargo_id" required>
+                        <select class="form-select @error('cargo_id') is-invalid @enderror" 
+                                id="cargo_id" 
+                                name="cargo_id" 
+                                required
+                                oninvalid="this.setCustomValidity('Selecciona un cargo de la lista.')"
+                                oninput="this.setCustomValidity('')">
                             <option value="" disabled selected>Selecciona un Cargo</option>
                             @foreach ($cargos as $cargo)
                                 @if($cargo->nombre !== 'Super Administrador')
@@ -152,14 +181,7 @@
                     @error('telefono') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
                 </div>
 
-                <div class="mb-3">
-                    <label for="fecha_contratacion" class="form-label">Fecha de Contratación</label>
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="fas fa-calendar-alt fa-fw"></i></span>
-                        <input type="date" class="form-control @error('fecha_contratacion') is-invalid @enderror" id="fecha_contratacion" name="fecha_contratacion" value="{{ old('fecha_contratacion') }}">
-                    </div>
-                    @error('fecha_contratacion') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
-                </div>
+                {{-- SE ELIMINÓ EL CAMPO FECHA DE CONTRATACIÓN --}}
                 
                 {{-- Botones de Acción --}}
                 <div class="d-flex justify-content-between mt-4">
@@ -180,23 +202,17 @@
     </div>
 </div>
 
-{{-- SCRIPT INTEGRADO: EMAIL + INTERRUPTOR --}}
+{{-- SCRIPT --}}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Elementos del DOM
         const checkAcceso = document.getElementById('checkAcceso');
         const areaLogin = document.getElementById('areaLogin');
-        
-        // Inputs que deben ser obligatorios SOLO si hay acceso
         const emailPrefixInput = document.getElementById('email_prefix');
         const passwordInput = document.getElementById('password');
         const passwordConfInput = document.getElementById('password_confirmation');
-        
-        // Campo oculto de email
         const hiddenEmailInput = document.getElementById('hidden_email');
         const dominio = '@panaderia.com';
 
-        // 1. FUNCIÓN: Actualizar email completo
         function updateFullEmail() {
             if(emailPrefixInput.value) {
                 hiddenEmailInput.value = emailPrefixInput.value.trim() + dominio;
@@ -205,24 +221,17 @@
             }
         }
 
-        // 2. FUNCIÓN: Mostrar/Ocultar campos de login
         function toggleLoginFields() {
             if (checkAcceso.checked) {
-                // MOSTRAR
                 areaLogin.style.display = 'block';
-                // Hacer obligatorios
                 emailPrefixInput.required = true;
                 passwordInput.required = true;
                 passwordConfInput.required = true;
             } else {
-                // OCULTAR
                 areaLogin.style.display = 'none';
-                // Quitar obligatoriedad
                 emailPrefixInput.required = false;
                 passwordInput.required = false;
                 passwordConfInput.required = false;
-                
-                // Opcional: Limpiar valores si se desmarca para no enviar basura
                 emailPrefixInput.value = '';
                 passwordInput.value = '';
                 passwordConfInput.value = '';
@@ -230,11 +239,26 @@
             }
         }
 
-        // Listeners
+        // Toggle Password Visibility
+        function setupPasswordToggle(inputId, buttonId) {
+            const input = document.getElementById(inputId);
+            const button = document.getElementById(buttonId);
+            
+            button.addEventListener('click', function() {
+                const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+                input.setAttribute('type', type);
+                const icon = this.querySelector('i');
+                icon.classList.toggle('fa-eye');
+                icon.classList.toggle('fa-eye-slash');
+            });
+        }
+
+        setupPasswordToggle('password', 'togglePassword');
+        setupPasswordToggle('password_confirmation', 'toggleConfirmPassword');
+
         emailPrefixInput.addEventListener('input', updateFullEmail);
         checkAcceso.addEventListener('change', toggleLoginFields);
 
-        // Ejecutar al inicio (para cargar estado 'old' o limpiar)
         updateFullEmail();
         toggleLoginFields();
     });

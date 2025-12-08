@@ -1,152 +1,108 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Ticket de Pedido #{{ $pedido->id }}</title>
-    <style>
-        body {
-            font-family: 'Courier New', Courier, monospace; /* Fuente tipo ticket para alineación */
-            font-size: 12px;
-            margin: 0;
-            padding: 5px;
-            width: 80mm; /* Ancho estándar de impresora térmica (ajustable a 58mm) */
-            background-color: #fff;
-        }
-        .text-center { text-align: center; }
-        .text-right { text-align: right; }
-        .text-left { text-align: left; }
-        .bold { font-weight: bold; }
-        
-        /* Línea separadora punteada */
-        .line { 
-            border-bottom: 1px dashed #000; 
-            margin: 8px 0; 
-        }
-        
-        .logo { 
-            font-size: 16px; 
-            font-weight: bold; 
-            margin-bottom: 5px; 
-            text-transform: uppercase;
-        }
-        
-        table { 
-            width: 100%; 
-            border-collapse: collapse;
-        }
-        
-        td, th { 
-            padding: 2px 0;
-            vertical-align: top; 
-        }
-
-        /* Ocultar elementos al imprimir si es necesario */
-        @media print {
-            .no-print { display: none; }
-        }
-    </style>
+    <title>Ticket Pedido #{{ $pedido->id }}</title>
+    {{-- Importante: Usamos el mismo CSS que el ticket de venta --}}
+    <link rel="stylesheet" href="{{ public_path('css/ticket.css') }}">
 </head>
-<body onload="window.print()"> {{-- Imprimir automáticamente al cargar la página --}}
+<body onload="window.print()">
+    <article class="ticket-body">
+        
+        {{-- 1. ENCABEZADO (Igual al ticket de venta) --}}
+        <header class="text-center">
+            <h4>Panaderia "JIREH"</h4>
+            <p>Calle Allende, Chalco EDOMEX.</p>
+            <p>Tel: 621382826</p>
+            <p><strong>TICKET DE ENTREGA / PEDIDO</strong></p>
+        </header>
 
-    <div class="text-center">
-        <div class="logo">PANADERÍA KAIROS</div>
-        <div>Ticket de Entrega</div>
-        <div class="line"></div>
-        <div class="text-left">
-            <strong>Folio:</strong> #{{ $pedido->id }}<br>
-            <strong>Fecha:</strong> {{ date('d/m/Y h:i A') }}<br> {{-- Fecha de impresión --}}
-        </div>
-    </div>
+        <hr>
 
-    <div class="line"></div>
+        {{-- 2. INFORMACIÓN DEL PEDIDO Y CLIENTE --}}
+        <section>
+            <p><strong>Folio Pedido:</strong> #{{ $pedido->id }}</p>
+            {{-- Usamos la fecha actual de impresión --}}
+            <p><strong>Fecha Impresión:</strong> {{ date('d/m/Y h:i A') }}</p>
+            
+            <p><strong>Cliente:</strong> {{ $pedido->nombre_cliente }}</p>
+            
+            @if($pedido->telefono_cliente)
+                <p><strong>Tel:</strong> {{ $pedido->telefono_cliente }}</p>
+            @endif
 
-    {{-- Datos del Cliente --}}
-    <div>
-        <strong>Cliente:</strong> {{ $pedido->nombre_cliente }}<br>
-        @if($pedido->telefono_cliente)
-            <strong>Tel:</strong> {{ $pedido->telefono_cliente }}<br>
-        @endif
-        @if($pedido->fecha_entrega)
-            <strong>Entrega:</strong> {{ \Carbon\Carbon::parse($pedido->fecha_entrega)->format('d/m/Y') }}
-        @endif
-    </div>
+            @if($pedido->fecha_entrega)
+                <p><strong>Fecha Entrega:</strong> {{ \Carbon\Carbon::parse($pedido->fecha_entrega)->format('d/m/Y') }}</p>
+            @endif
+        </section>
 
-    <div class="line"></div>
+        <hr>
 
-    {{-- Tabla de Productos --}}
-    <table>
-        <thead>
-            <tr>
-                <th class="text-center" style="width: 15%">Cant.</th>
-                <th class="text-left" style="width: 60%">Producto</th>
-                <th class="text-right" style="width: 25%">Importe</th>
-            </tr>
-        </thead>
-        <tbody>
+        {{-- 3. DETALLES DE LOS PRODUCTOS (Sin tablas, usando divs y spans) --}}
+        <section>
+            <div>
+                <span><strong>CANT PRODUCTO</strong></span>
+                <span class="float-right"><strong>IMPORTE</strong></span>
+            </div>
+
             @foreach($pedido->detalles as $detalle)
-            <tr>
-                <td class="text-center">{{ $detalle->cantidad }}</td>
-                <td class="text-left">
-                    {{ $detalle->producto->nombre ?? 'Producto' }}
+                <div style="margin-bottom: 5px;">
+                    {{-- Cantidad y Nombre --}}
+                    <span>{{ $detalle->cantidad }}x {{ $detalle->producto->nombre ?? 'Producto' }}</span>
+                    
+                    {{-- Precio calculado --}}
+                    <span class="float-right">${{ number_format($detalle->cantidad * $detalle->precio_unitario, 2) }}</span>
+                    
+                    {{-- Especificaciones (si las hay) en pequeñito --}}
                     @if($detalle->especificaciones)
-                        <br><small>({{ $detalle->especificaciones }})</small>
+                        <br>
+                        <small style="color: #555; font-size: 0.9em;">({{ $detalle->especificaciones }})</small>
                     @endif
-                </td>
-                <td class="text-right">${{ number_format($detalle->cantidad * $detalle->precio_unitario, 2) }}</td>
-            </tr>
+                </div>
             @endforeach
-        </tbody>
-    </table>
+        </section>
 
-    <div class="line"></div>
+        <hr>
 
-    {{-- Totales --}}
-    <table>
-        <tr>
-            <td class="text-right">Subtotal:</td>
-            <td class="text-right">${{ number_format($pedido->total, 2) }}</td>
-        </tr>
-        <tr>
-            <td class="text-right">Total:</td>
-            <td class="text-right bold" style="font-size: 14px;">${{ number_format($pedido->total, 2) }}</td>
-        </tr>
-        
-        {{-- Desglose de pagos --}}
-        <tr>
-            <td colspan="2" class="line"></td>
-        </tr>
-        
-        <tr>
-            <td class="text-right">Anticipo:</td>
-            <td class="text-right">-${{ number_format($pedido->anticipo, 2) }}</td>
-        </tr>
-        
-        @php
-            // Calculamos lo que se pagó al final (si ya está entregado, es el resto)
-            $liquidacion = $pedido->total - $pedido->anticipo;
-        @endphp
+        {{-- 4. TOTALES Y PAGOS (Adaptado a la lógica de Anticipo/Liquidación) --}}
+        <section>
+            {{-- Total General --}}
+            <div>
+                <span class="float-right"><strong>TOTAL:</strong> ${{ number_format($pedido->total, 2) }}</span>
+            </div>
 
-        @if($liquidacion > 0)
-        <tr>
-            <td class="text-right">Liquidación:</td>
-            <td class="text-right bold">-${{ number_format($liquidacion, 2) }}</td>
-        </tr>
-        @endif
+            {{-- Desglose de pagos --}}
+            <div style="margin-top: 5px;">
+                <span class="float-right">Anticipo: -${{ number_format($pedido->anticipo, 2) }}</span>
+            </div>
 
-        <tr>
-            <td class="text-right bold" style="padding-top: 5px;">Saldo Pendiente:</td>
-            <td class="text-right bold" style="padding-top: 5px;">$0.00</td>
-        </tr>
-    </table>
+            @php
+                $liquidacion = $pedido->total - $pedido->anticipo;
+            @endphp
 
-    <div class="line"></div>
-    
-    <div class="text-center">
-        <p>¡Gracias por su preferencia!</p>
-        <p>Vuelva pronto.</p>
-        <br>
-        <small>*** Copia Cliente ***</small>
-    </div>
+            @if($liquidacion > 0)
+                <div>
+                    <span class="float-right">Liquidación: -${{ number_format($liquidacion, 2) }}</span>
+                </div>
+            @endif
 
+            {{-- Saldo Final --}}
+            <div style="margin-top: 10px; border-top: 1px dashed #000; padding-top: 5px;">
+                <span class="float-right"><strong>Saldo Pendiente: $0.00</strong></span>
+            </div>
+        </section>
+
+        <hr>
+
+        {{-- 5. PIE DE PÁGINA (Igual al ticket de venta) --}}
+        <footer class="text-center">
+            <p>¡Gracias por su preferencia!</p>
+            <p>Vuelva pronto.</p>
+            <p>¡Contactanos! www.ollintem.com.mx</p>
+            <br>
+            <small>*** Copia Cliente ***</small>
+        </footer>
+
+    </article>
 </body>
 </html>

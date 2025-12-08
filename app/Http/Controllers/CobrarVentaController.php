@@ -13,7 +13,6 @@ class CobrarVentaController extends Controller
 {
     /**
      * Muestra la página principal para cobrar
-     * (¡AHORA TAMBIÉN CARGA LA LISTA INICIAL DE PENDIENTES!)
      */
     public function index()
     {
@@ -25,46 +24,43 @@ class CobrarVentaController extends Controller
             return redirect()->route('cajas.index')->with('error', 'Debes abrir tu caja antes de poder cobrar ventas.');
         }
 
-        // --- ¡NUEVO! Obtenemos la lista de pendientes al cargar ---
+        // --- CORRECCIÓN AQUÍ: Agregado 'cliente' al with() ---
         $ventasPendientes = Venta::withoutGlobalScopes()
-                            ->with('user', 'detalles.producto') // Cargar lo necesario
+                            ->with('user', 'detalles.producto', 'cliente') // <--- AQUÍ FALTABA EL CLIENTE
                             ->where('status', 'Pendiente')
-                            ->orderBy('fecha_hora', 'asc') // Primero en entrar, primero en salir
+                            ->orderBy('fecha_hora', 'asc')
                             ->get();
-        // --- FIN NUEVO ---
 
-        return view('cobrar.index', compact('ventasPendientes')); // <-- Pasamos la variable a la vista
+        return view('cobrar.index', compact('ventasPendientes'));
     }
 
     /**
-     * ¡NUEVA FUNCIÓN!
      * Devuelve la lista de pendientes en JSON para el refresco automático.
      */
     public function getVentasPendientes()
     {
+        // --- CORRECCIÓN AQUÍ: Agregado 'cliente' al with() ---
         $ventasPendientes = Venta::withoutGlobalScopes()
-                            ->with('user', 'detalles.producto')
+                            ->with('user', 'detalles.producto', 'cliente') // <--- AQUÍ TAMBIÉN
                             ->where('status', 'Pendiente')
                             ->orderBy('fecha_hora', 'asc')
                             ->get();
         
-        // Devolvemos la vista parcial (o JSON, pero la vista es más fácil de renderizar)
-        // No, devolvemos JSON, es más limpio para el JS.
         return response()->json($ventasPendientes);
     }
 
 
     /**
      * Busca una venta pendiente por su ID (Folio).
-     * (Sin cambios, pero ahora el JS la usará de forma diferente)
      */
     public function buscar(Request $request)
     {
         $request->validate(['folio' => 'required|integer']);
         $folio = $request->input('folio');
 
+        // --- CORRECCIÓN AQUÍ: Agregado 'cliente' al with() ---
         $venta = Venta::withoutGlobalScopes() 
-                    ->with('detalles.producto', 'user') 
+                    ->with('detalles.producto', 'user', 'cliente') // <--- Y AQUÍ (CRUCIAL PARA LA BÚSQUEDA)
                     ->where('id', $folio)
                     ->where('status', 'Pendiente') 
                     ->first();
@@ -78,7 +74,7 @@ class CobrarVentaController extends Controller
 
     /**
      * Marca una venta pendiente como 'Pagada'.
-     * (Sin cambios)
+     * (Sin cambios en lógica)
      */
     public function pagar(Request $request) 
     {
