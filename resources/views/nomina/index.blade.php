@@ -166,6 +166,13 @@
                         <strong>¿Es un descuento?</strong> (Restar este monto del total)
                     </label>
                 </div>
+                <div class="form-check mb-3 bg-light p-2 rounded border">
+    <input class="form-check-input ms-1" type="checkbox" name="pagar_de_caja" value="1" id="pagarCaja">
+    <label class="form-check-label ms-2 fw-bold text-danger" for="pagarCaja">
+        <i class="fas fa-money-bill-wave me-1"></i> Pagar ahora (Descontar de Caja)
+    </label>
+    <div class="form-text ms-4">Si marcas esto, se creará un egreso en la caja abierta.</div>
+</div>
 
                 <div class="d-grid">
                     <button class="btn btn-success btn-lg">
