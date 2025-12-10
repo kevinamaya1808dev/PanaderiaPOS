@@ -689,80 +689,94 @@
         }
         
         if (confirmPaymentBtn) { 
-            confirmPaymentBtn.addEventListener('click', async function() { 
-                if (Object.keys(cart).length === 0 || !totalSpan) return;
+    confirmPaymentBtn.addEventListener('click', async function() { 
+        if (Object.keys(cart).length === 0 || !totalSpan) return;
 
-                const detalles = Object.keys(cart).map(id => ({ 
-                    producto_id: id, 
-                    cantidad: cart[id].qty, 
-                    precio_unitario: cart[id].price, 
-                    costo_unitario: cart[id].cost, 
-                    importe: cart[id].price * cart[id].qty 
-                }));
-                const total = parseFloat(totalSpan.textContent.replace('$', ''));
-                const metodoPago = modalMetodoPago ? modalMetodoPago.value : 'efectivo';
-                let montoRecibido = modalMontoRecibido ? (parseFloat(modalMontoRecibido.value) || 0) : total;
-                let montoEntregado = 0;
-                const folioTarjeta = modalFolioPago ? modalFolioPago.value.trim() : null;
+        const detalles = Object.keys(cart).map(id => ({ 
+            producto_id: id, 
+            cantidad: cart[id].qty, 
+            precio_unitario: cart[id].price, 
+            costo_unitario: cart[id].cost, 
+            importe: cart[id].price * cart[id].qty 
+        }));
+        
+        const total = parseFloat(totalSpan.textContent.replace('$', ''));
+        const metodoPago = modalMetodoPago ? modalMetodoPago.value : 'efectivo';
+        let montoRecibido = modalMontoRecibido ? (parseFloat(modalMontoRecibido.value) || 0) : total;
+        let montoEntregado = 0;
+        
+        // Aquí ya capturabas bien el folio
+        const folioTarjeta = modalFolioPago ? modalFolioPago.value.trim() : null;
 
-                if (metodoPago === 'efectivo') {
-                    montoEntregado = Math.max(0, montoRecibido - total); 
-                    if (montoRecibido < total) {
-                        showAlertModal('Monto recibido insuficiente.', 'Error de Pago');
-                        if(modalMontoRecibido) modalMontoRecibido.focus();
-                        return; 
-                    }
-                } else if (metodoPago === 'tarjeta') {
-                    montoRecibido = total; 
-                    if (!folioTarjeta) { 
-                        showAlertModal('Por favor, ingrese el folio o número de autorización.', 'Error de Pago');
-                        if(modalFolioPago) modalFolioPago.focus();
-                        return;
-                    }
+        if (metodoPago === 'efectivo') {
+            montoEntregado = Math.max(0, montoRecibido - total); 
+            if (montoRecibido < total) {
+                showAlertModal('Monto recibido insuficiente.', 'Error de Pago');
+                if(modalMontoRecibido) modalMontoRecibido.focus();
+                return; 
+            }
+        } else if (metodoPago === 'tarjeta') {
+            montoRecibido = total; 
+            if (!folioTarjeta) { 
+                showAlertModal('Por favor, ingrese el folio o número de autorización.', 'Error de Pago');
+                if(modalFolioPago) modalFolioPago.focus();
+                return;
+            }
+        }
+        
+        // --- AQUÍ ESTÁ EL CAMBIO IMPORTANTE ---
+        const payload = {
+            _token: csrfToken, 
+            cliente_id: selectedClientId, 
+            metodo_pago: metodoPago,
+            
+            // AGREGAMOS ESTA LÍNEA:
+            // Enviamos 'folioTarjeta' como 'referencia_pago' para que coincida con el Controller
+            referencia_pago: folioTarjeta, 
+
+            total: total, 
+            monto_recibido: montoRecibido, 
+            monto_entregado: montoEntregado,
+            detalles: detalles,
+            status: 'Pagada'
+        };
+        // --------------------------------------
+
+        this.disabled = true;
+        this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Procesando...';
+        
+        try {
+            const response = await fetch("{{ route('ventas.store') }}", { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+                body: JSON.stringify(payload)
+            });
+            const result = await response.json(); 
+
+            if (response.ok) {
+                if(paymentModal) paymentModal.hide(); 
+                const printUrl = `{{ url('/ventas/imprimir') }}/${result.venta_id}`;
+                if (printFrame) {
+                    printFrame.src = printUrl; 
                 }
-                
-                const payload = {
-                    _token: csrfToken, cliente_id: selectedClientId, metodo_pago: metodoPago,
-                    total: total, monto_recibido: montoRecibido, monto_entregado: montoEntregado,
-                    detalles: detalles,
-                    status: 'Pagada'
-                };
-
-                this.disabled = true;
-                this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Procesando...';
-                
-                try {
-                    const response = await fetch("{{ route('ventas.store') }}", { 
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken },
-                        body: JSON.stringify(payload)
-                    });
-                    const result = await response.json(); 
-
-                    if (response.ok) {
-                        if(paymentModal) paymentModal.hide(); 
-                        const printUrl = `{{ url('/ventas/imprimir') }}/${result.venta_id}`;
-                        if (printFrame) {
-                            printFrame.src = printUrl; 
-                        }
-                        for (const id in cart) { delete cart[id]; }
-                        updateSelectedClient(null, 'Público General'); 
-                        updateCartUI();
-                    } else { 
-                        let errMsg = result.message || 'Error.';
-                        if (result.errors) { errMsg += '\nDetalles:\n'; for(const f in result.errors) {errMsg += `- ${result.errors[f].join(', ')}\n`;} }
-                        showAlertModal(errMsg, 'Error al Guardar Venta');
-                    }
-                } catch (e) { 
-                    console.error('Error al procesar venta:', e); 
-                    showAlertModal('Error de conexión o problema en el script. Revise la consola.', 'Error de Red');
-                } 
-                finally {
-                    this.disabled = false;
-                    this.innerHTML = '<i class="fas fa-check-circle me-2"></i> Confirmar Pago';
-                }
-            }); 
+                for (const id in cart) { delete cart[id]; }
+                updateSelectedClient(null, 'Público General'); 
+                updateCartUI();
+            } else { 
+                let errMsg = result.message || 'Error.';
+                if (result.errors) { errMsg += '\nDetalles:\n'; for(const f in result.errors) {errMsg += `- ${result.errors[f].join(', ')}\n`;} }
+                showAlertModal(errMsg, 'Error al Guardar Venta');
+            }
+        } catch (e) { 
+            console.error('Error al procesar venta:', e); 
+            showAlertModal('Error de conexión o problema en el script. Revise la consola.', 'Error de Red');
         } 
+        finally {
+            this.disabled = false;
+            this.innerHTML = '<i class="fas fa-check-circle me-2"></i> Confirmar Pago';
+        }
+    }); 
+}
 
         // Generar Ticket Pendiente
         if (btnGenerarTicket) {

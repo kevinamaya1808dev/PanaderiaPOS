@@ -17,6 +17,7 @@ class Venta extends Model
         'user_id',          // ID del usuario (cajero) que hizo la venta
         'fecha_hora',       // Timestamp de la venta
         'metodo_pago',      // Ej: 'efectivo', 'tarjeta'
+        'referencia_pago',
         'total',            // Monto total de la venta
         'monto_recibido',   // Monto que dio el cliente
         'monto_entregado',  // Cambio que se le dio al cliente
