@@ -151,7 +151,6 @@
                 
                 {{-- TABLA 1: VENTAS --}}
                 <div class="card shadow-lg mb-4">
-                    {{-- CAMBIO: Agregado d-flex y el Badge de Total --}}
                     <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
                         <h4 class="mb-0"><i class="fas fa-shopping-cart me-2"></i> Ventas del Turno</h4>
                         @php $listaVentas = $ventasDelTurno ?? $ventas ?? collect([]); @endphp
@@ -180,11 +179,33 @@
                                                     {{ \Carbon\Carbon::parse($venta->fecha_hora)->format('d/m/Y') }}
                                                 </td>
                                                 <td class="fw-bold">${{ number_format($venta->total, 2) }}</td>
-                                                <td>
-                                                    <span class="badge {{ $venta->metodo_pago == 'efectivo' ? 'bg-success' : 'bg-secondary' }}">
-                                                        {{ ucfirst($venta->metodo_pago) }}
-                                                    </span>
+                                                
+                                                {{-- ================= CAMBIOS EN COLUMNA MÉTODO (VENTAS) ================= --}}
+                                                <td class="align-middle">
+                                                    @php $metodo = strtolower($venta->metodo_pago); @endphp
+                                                    @if($metodo == 'tarjeta' || $metodo == 'transferencia')
+                                                        {{-- Badge Gris para bancos --}}
+                                                        <span class="badge bg-secondary">
+                                                            <i class="fas fa-credit-card me-1"></i> {{ ucfirst($venta->metodo_pago) }}
+                                                        </span>
+                                                        
+                                                        {{-- Mostrar Referencia --}}
+                                                        @if($venta->referencia_pago)
+                                                            <div class="text-muted" style="font-size: 0.75rem; margin-top: 2px;">
+                                                                <i class="fas fa-hashtag"></i> {{ $venta->referencia_pago }}
+                                                            </div>
+                                                        @else
+                                                            <div class="text-danger" style="font-size: 0.7rem;">Sin Ref.</div>
+                                                        @endif
+                                                    @else
+                                                        {{-- Badge Verde para Efectivo --}}
+                                                        <span class="badge bg-success">
+                                                            <i class="fas fa-money-bill-wave me-1"></i> Efectivo
+                                                        </span>
+                                                    @endif
                                                 </td>
+                                                {{-- ================= FIN CAMBIOS ================= --}}
+
                                                 <td>
                                                     <button class="btn btn-sm btn-outline-primary" onclick="imprimirTicket({{ $venta->id }})">
                                                         <i class="fas fa-print"></i>
@@ -201,7 +222,6 @@
 
                {{-- TABLA 2: ANTICIPOS --}}
                 <div class="card shadow-lg">
-                    {{-- CAMBIO: Agregado d-flex y el Badge de Total --}}
                     <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
                         <h4 class="mb-0"><i class="fas fa-clock me-2"></i> Anticipos / Apartados</h4>
                         <span class="badge bg-white text-dark fs-6">
@@ -226,7 +246,6 @@
                                         @foreach($anticipos as $anticipo)
                                             <tr>
                                                 <td>{{ $anticipo->created_at->format('d/m/Y') }}</td>
-                                                
                                                 <td>
                                                     Pedido #{{ $anticipo->pedido_id }}
                                                 </td> 
@@ -234,11 +253,28 @@
                                                 <td class="fw-bold text-success">
                                                     +${{ number_format($anticipo->monto, 2) }}
                                                 </td>
-                                                <td>
-                                                     <span class="badge {{ strtolower($anticipo->metodo_pago) == 'efectivo' ? 'bg-success' : 'bg-secondary' }}">
-                                                        {{ ucfirst($anticipo->metodo_pago) }}
-                                                    </span>
+
+                                                {{-- ================= CAMBIOS EN COLUMNA MÉTODO (ANTICIPOS) ================= --}}
+                                                <td class="align-middle">
+                                                    @php $metodoAnt = strtolower($anticipo->metodo_pago); @endphp
+                                                    @if($metodoAnt == 'tarjeta' || $metodoAnt == 'transferencia')
+                                                        <span class="badge bg-secondary">
+                                                             <i class="fas fa-credit-card me-1"></i> {{ ucfirst($anticipo->metodo_pago) }}
+                                                        </span>
+                                                        
+                                                        @if($anticipo->referencia_pago)
+                                                            <div class="text-muted fw-bold" style="font-size: 0.75rem; margin-top: 2px;">
+                                                                Ref: {{ $anticipo->referencia_pago }}
+                                                            </div>
+                                                        @endif
+                                                    @else
+                                                        <span class="badge bg-success">
+                                                            <i class="fas fa-money-bill-wave me-1"></i> {{ ucfirst($anticipo->metodo_pago) }}
+                                                        </span>
+                                                    @endif
                                                 </td>
+                                                {{-- ================= FIN CAMBIOS ================= --}}
+
                                             </tr>
                                         @endforeach
                                     </tbody>
@@ -246,7 +282,7 @@
                             </div>
                         @endif
                     </div>
-                </div>
+                </div> 
 
             </div>
         </div> {{-- Fin Fila Superior --}}
@@ -258,7 +294,6 @@
                 <div class="card shadow-lg">
                     <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
                         <h4 class="mb-0"><i class="fas fa-money-bill-wave me-2"></i> Gastos y Salidas de Efectivo</h4>
-                        {{-- Este ya estaba bien --}}
                         <span class="badge bg-white text-danger fs-6">Total: ${{ number_format($totalGastos ?? 0, 2) }}</span>
                     </div>
 

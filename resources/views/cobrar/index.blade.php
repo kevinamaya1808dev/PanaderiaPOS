@@ -94,7 +94,7 @@
 
 
 {{-- ========================================================== --}}
-{{-- MODAL DE PAGO (Lógica Intacta) --}}
+{{-- MODAL DE PAGO --}}
 {{-- ========================================================== --}}
 <div class="modal fade" id="paymentModal" tabindex="-1" aria-labelledby="paymentModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered">
@@ -277,12 +277,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         productosHtml += '</ul>';
 
-        // --- CORRECCIÓN AQUÍ: Determinar Nombre del Cliente ---
-        // Se busca en este orden:
-        // 1. Relación con Cliente (propiedad 'Nombre' mayúscula)
-        // 2. Relación con Cliente (propiedad 'nombre' minúscula)
-        // 3. Propiedad directa en la venta (venta.nombre_cliente)
-        // 4. Fallback a 'Público General'
         let clienteNombre = 'Público General';
         
         if (venta.cliente) {
@@ -302,7 +296,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         <p><strong>Folio:</strong> <span id="folio-display">${venta.id}</span></p>
                         <p><strong>Generada por:</strong> <span id="cajero-origen-display">${venta.user.name || 'N/A'}</span></p>
                         
-                        {{-- AQUÍ SE IMPRIME EL NOMBRE CORRECTO --}}
                         <p><strong>Cliente:</strong> <span id="cliente-display">${clienteNombre}</span></p>
                         
                         <hr>
@@ -393,13 +386,17 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
         
+        // --- CAMBIO IMPORTANTE AQUÍ ---
         const payload = {
             _token: csrfToken,
             venta_id: ventaEncontrada.id,
             metodo_pago: metodoPago,
             monto_recibido: montoRecibido,
             monto_entregado: montoEntregado,
-            folio_tarjeta: folioTarjeta
+            
+            // ANTES: folio_tarjeta: folioTarjeta
+            // AHORA: Usamos el nombre que espera el controlador
+            referencia_pago: folioTarjeta 
         };
 
         this.disabled = true;
@@ -461,12 +458,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
                 productosHtml += '</ul>';
 
-                // Formateo de fecha
                 const fecha = new Date(venta.fecha_hora);
                 const fechaStr = fecha.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit' }) + ' ' +
                                  fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
 
-                // Inicial del nombre
                 const nombre = venta.user.name ?? 'N/A';
                 const inicial = nombre.charAt(0).toUpperCase();
 

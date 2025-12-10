@@ -53,7 +53,7 @@
                         <div class="col-6 text-end fw-bold text-success fs-5">${{ number_format($totalVentasEfectivo, 2) }}</div>
                     </div>
                     
-                    {{-- AGREGADO VISUAL: Anticipos en el Balance General también --}}
+                    {{-- Anticipos en el Balance General --}}
                     @php 
                         $totalAnticipos = isset($anticipos) ? $anticipos->sum('monto') : 0; 
                     @endphp
@@ -86,7 +86,6 @@
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-header bg-primary text-white fw-bold d-flex justify-content-between align-items-center">
             <span><i class="fas fa-shopping-cart me-2"></i> Ventas del Turno</span>
-            {{-- CAMBIO: Mostrar TOTAL DINERO en lugar de conteo --}}
             <span class="badge bg-white text-primary fs-6">Total: ${{ number_format($ventas->sum('total'), 2) }}</span>
         </div>
         <div class="card-body p-0">
@@ -116,13 +115,37 @@
                                         </ul>
                                     </td>
                                     <td class="fw-bold">${{ number_format($venta->total, 2) }}</td>
-                                    <td>
+                                    
+                                    {{-- CAMBIO EN COLUMNA MÉTODO (VENTAS) --}}
+                                    <td class="align-middle">
                                         @if($venta->metodo_pago == 'pendiente')
                                             <span class="badge bg-warning text-dark">Pendiente</span>
                                         @else
-                                            <span class="badge bg-success text-white">{{ ucfirst($venta->metodo_pago) }}</span>
+                                            @php $metodo = strtolower($venta->metodo_pago); @endphp
+                                            @if($metodo == 'tarjeta' || $metodo == 'transferencia')
+                                                {{-- Badge Gris para bancos --}}
+                                                <span class="badge bg-secondary">
+                                                    <i class="fas fa-credit-card me-1"></i> {{ ucfirst($venta->metodo_pago) }}
+                                                </span>
+                                                
+                                                {{-- Mostrar Referencia --}}
+                                                @if($venta->referencia_pago)
+                                                    <div class="text-muted" style="font-size: 0.75rem; margin-top: 2px;">
+                                                        <i class="fas fa-hashtag"></i> {{ $venta->referencia_pago }}
+                                                    </div>
+                                                @else
+                                                    <div class="text-danger" style="font-size: 0.7rem;">Sin Ref.</div>
+                                                @endif
+                                            @else
+                                                {{-- Badge Verde para Efectivo --}}
+                                                <span class="badge bg-success text-white">
+                                                    <i class="fas fa-money-bill-wave me-1"></i> {{ ucfirst($venta->metodo_pago) }}
+                                                </span>
+                                            @endif
                                         @endif
                                     </td>
+                                    {{-- FIN CAMBIO --}}
+
                                     <td class="text-center">
                                         <button class="btn btn-sm btn-outline-primary" onclick="imprimirTicket({{ $venta->id }})" title="Reimprimir Ticket">
                                             <i class="fas fa-print"></i>
@@ -141,7 +164,6 @@
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-header bg-warning text-dark fw-bold d-flex justify-content-between align-items-center">
             <span><i class="fas fa-clock me-2"></i> Anticipos / Apartados</span>
-            {{-- CAMBIO: Mostrar TOTAL DINERO en lugar de conteo --}}
             <span class="badge bg-white text-dark fs-6">
                 Total: ${{ number_format(isset($anticipos) ? $anticipos->sum('monto') : 0, 2) }}
             </span>
@@ -166,11 +188,27 @@
                                     <td class="ps-4">{{ $anticipo->created_at->format('d/m/y') }}</td>
                                     <td>Pedido #{{ $anticipo->pedido_id }}</td>
                                     <td class="fw-bold text-success">+${{ number_format($anticipo->monto, 2) }}</td>
-                                    <td>
-                                        <span class="badge {{ strtolower($anticipo->metodo_pago) == 'efectivo' ? 'bg-success' : 'bg-secondary' }}">
-                                            {{ ucfirst($anticipo->metodo_pago) }}
-                                        </span>
+                                    
+                                    {{-- CAMBIO EN COLUMNA MÉTODO (ANTICIPOS) --}}
+                                    <td class="align-middle">
+                                        @php $metodoAnt = strtolower($anticipo->metodo_pago); @endphp
+                                        @if($metodoAnt == 'tarjeta' || $metodoAnt == 'transferencia')
+                                            <span class="badge bg-secondary">
+                                                 <i class="fas fa-credit-card me-1"></i> {{ ucfirst($anticipo->metodo_pago) }}
+                                            </span>
+                                            
+                                            @if($anticipo->referencia_pago)
+                                                <div class="text-muted fw-bold" style="font-size: 0.75rem; margin-top: 2px;">
+                                                    Ref: {{ $anticipo->referencia_pago }}
+                                                </div>
+                                            @endif
+                                        @else
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-money-bill-wave me-1"></i> {{ ucfirst($anticipo->metodo_pago) }}
+                                            </span>
+                                        @endif
                                     </td>
+                                    {{-- FIN CAMBIO --}}
                                 </tr>
                             @endforeach
                         </tbody>
@@ -182,12 +220,10 @@
 
     {{-- 3. TABLA DE GASTOS (Solo Egresos) --}}
     <div class="card shadow-sm border-0 mb-4">
-        {{-- Filtramos solo los egresos primero para poder sumar --}}
         @php $gastos = $movimientos->where('tipo', 'egreso'); @endphp
 
         <div class="card-header bg-danger text-white fw-bold d-flex justify-content-between align-items-center">
             <span><i class="fas fa-money-bill-wave me-2"></i> Gastos del Turno</span>
-            {{-- CAMBIO: Agregado el Total aquí también --}}
             <span class="badge bg-white text-danger fs-6">Total: ${{ number_format($gastos->sum('monto'), 2) }}</span>
         </div>
         <div class="card-body p-0">
