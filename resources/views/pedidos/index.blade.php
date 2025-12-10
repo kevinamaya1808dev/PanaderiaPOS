@@ -99,7 +99,7 @@
                                                 {{ $pedido->total }}, 
                                                 {{ $pedido->saldo_pendiente }}
                                             )">
-                                        <i class="fas fa-hand-holding-usd me-1"></i> Cobrar ${{ number_format($pedido->saldo_pendiente, 0) }} y Entregar
+                                            <i class="fas fa-hand-holding-usd me-1"></i> Cobrar ${{ number_format($pedido->saldo_pendiente, 0) }} y Entregar
                                     </button>
                                 @else
                                     {{-- CASO 2: Pagado -> Entrega Directa --}}
@@ -173,6 +173,12 @@
                         </select>
                     </div>
 
+                    {{-- NUEVO: Input para Referencia (Oculto al inicio) --}}
+                    <div class="mb-3" id="divReferenciaCobro" style="display: none;">
+                        <label for="referencia_pago" class="form-label fw-bold">Referencia / Folio:</label>
+                        <input type="text" name="referencia_pago" id="referencia_pago" class="form-control" placeholder="4 últimos dígitos o n° autorización">
+                    </div>
+
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" name="imprimir_ticket" id="imprimir_ticket" checked>
                         <label class="form-check-label" for="imprimir_ticket">
@@ -195,6 +201,7 @@
 
 @push('scripts')
 <script>
+    // Función para abrir el modal y setear datos
     function abrirModalCobro(id, nombre, folio, total, resta) {
         document.getElementById('modal_pedido_id').value = id;
         document.getElementById('modal_cliente_nombre').textContent = nombre;
@@ -208,10 +215,43 @@
         document.getElementById('modal_total').textContent = formatter.format(total);
         document.getElementById('modal_restante').textContent = formatter.format(resta);
 
+        // NUEVO: Resetear el formulario al abrir
+        document.getElementById('metodo_pago').value = 'efectivo';
+        const divRef = document.getElementById('divReferenciaCobro');
+        const inputRef = document.getElementById('referencia_pago');
+        
+        if(divRef && inputRef) {
+            divRef.style.display = 'none';
+            inputRef.value = '';
+            inputRef.required = false;
+        }
+
         var myModal = new bootstrap.Modal(document.getElementById('modalCobroPedido'));
         myModal.show();
     }
 
+    // NUEVO: Detectar cambios en el select dentro del DOMContentLoaded
+    document.addEventListener('DOMContentLoaded', function() {
+        const selectMetodo = document.getElementById('metodo_pago');
+        const divReferencia = document.getElementById('divReferenciaCobro');
+        const inputReferencia = document.getElementById('referencia_pago');
+
+        if(selectMetodo) {
+            selectMetodo.addEventListener('change', function() {
+                // Si es tarjeta o transferencia, mostramos el campo
+                if (this.value === 'tarjeta' || this.value === 'transferencia') {
+                    divReferencia.style.display = 'block';
+                    inputReferencia.required = true; // Lo hacemos obligatorio
+                } else {
+                    divReferencia.style.display = 'none';
+                    inputReferencia.required = false;
+                    inputReferencia.value = ''; // Limpiamos
+                }
+            });
+        }
+    });
+
+    // Lógica para imprimir ticket (si existe sesión)
     @if(session('print_ticket'))
         document.addEventListener('DOMContentLoaded', function() {
             const idPedido = "{{ session('print_ticket') }}";

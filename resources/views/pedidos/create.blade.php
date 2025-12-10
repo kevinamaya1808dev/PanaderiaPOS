@@ -77,6 +77,8 @@
                             </table>
                         </div>
                     </div>
+                    
+                    {{-- AQUÍ ESTÁN LOS CAMBIOS EN EL FOOTER --}}
                     <div class="card-footer bg-white">
                         <div class="row text-end align-items-center">
                             <div class="col-md-6 offset-md-6">
@@ -84,6 +86,25 @@
                                     <span class="fs-5">Total:</span>
                                     <span class="fs-5 fw-bold" id="txtTotal">$0.00</span>
                                 </div>
+                                
+                                <hr>
+
+                                {{-- NUEVO: Selector de Método de Pago --}}
+                                <div class="mb-2 text-start">
+                                    <label class="form-label small fw-bold">Método de Pago (Anticipo):</label>
+                                    <select name="metodo_pago" id="selectMetodoPago" class="form-select form-select-sm">
+                                        <option value="Efectivo">Efectivo</option>
+                                        <option value="Tarjeta">Tarjeta</option>
+                                        <option value="Transferencia">Transferencia</option>
+                                    </select>
+                                </div>
+
+                                {{-- NUEVO: Input Referencia (Oculto por defecto) --}}
+                                <div class="mb-2 text-start" id="divReferenciaPago" style="display: none;">
+                                    <label class="form-label small fw-bold">Referencia / Folio:</label>
+                                    <input type="text" name="referencia_pago" id="inputReferenciaPago" class="form-control form-control-sm" placeholder="4 últimos dígitos o n° autorización">
+                                </div>
+
                                 <div class="input-group mb-2">
                                     <span class="input-group-text bg-success text-white">Anticipo (Paga hoy)</span>
                                     <input type="number" name="anticipo" id="inputAnticipo" class="form-control text-end fw-bold text-success" step="0.50" min="0" value="0" required>
@@ -133,7 +154,7 @@
     </div>
 </div>
 
-{{-- SCRIPTS CORREGIDOS --}}
+{{-- SCRIPTS --}}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         
@@ -144,6 +165,11 @@
         const filaVacia = document.getElementById('filaVacia');
         const inputAnticipo = document.getElementById('inputAnticipo');
         
+        // Variables para método de pago
+        const selectMetodo = document.getElementById('selectMetodoPago');
+        const divReferencia = document.getElementById('divReferenciaPago');
+        const inputReferencia = document.getElementById('inputReferenciaPago');
+
         // Al hacer clic en un producto del modal
         document.querySelectorAll('.btn-producto').forEach(btn => {
             btn.addEventListener('click', function() {
@@ -207,11 +233,8 @@
 
         function calcularTotales() {
             let suma = 0;
-            // Solo sumamos filas que tengan input de cantidad (para ignorar fila vacía)
             document.querySelectorAll('.input-cantidad').forEach(input => {
                 const cantidad = parseInt(input.value) || 0;
-                // Buscamos el precio en el input hidden hermano del padre o abuelo
-                // Estrategia más segura: buscar en la misma fila TR
                 const row = input.closest('tr');
                 const precioInput = row.querySelector('input[name*="[precio]"]');
                 const precio = parseFloat(precioInput.value) || 0;
@@ -232,7 +255,7 @@
             spanSaldo.textContent = '$' + (saldo < 0 ? '0.00' : saldo.toFixed(2));
 
             if(saldo < 0) {
-                inputAnticipo.classList.add('is-invalid'); // Marca rojo si pagas más del total
+                inputAnticipo.classList.add('is-invalid'); 
             } else {
                 inputAnticipo.classList.remove('is-invalid');
             }
@@ -243,13 +266,42 @@
             inputAnticipo.addEventListener('input', calcularSaldo);
         }
         
+        // --- 2. Lógica Método de Pago y Referencia (NUEVO) ---
+        if(selectMetodo) {
+            selectMetodo.addEventListener('change', function() {
+                const metodo = this.value;
+                if (metodo === 'Tarjeta' || metodo === 'Transferencia') {
+                    divReferencia.style.display = 'block';
+                    inputReferencia.required = true; // Obligatorio si es tarjeta
+                } else {
+                    divReferencia.style.display = 'none';
+                    inputReferencia.value = ''; 
+                    inputReferencia.required = false;
+                }
+            });
+        }
+
+        // --- 3. Validación al enviar (NUEVO) ---
+        const formPedido = document.getElementById('formPedido');
+        if(formPedido) {
+            formPedido.addEventListener('submit', function(e) {
+                const anticipoVal = parseFloat(inputAnticipo.value) || 0;
+                
+                // Si hay anticipo y se seleccionó tarjeta, pero no hay referencia
+                if (anticipoVal > 0 && selectMetodo.value !== 'Efectivo' && inputReferencia.value.trim() === '') {
+                    e.preventDefault(); // Detener envío
+                    alert('Por favor ingrese la referencia o folio del pago.');
+                    inputReferencia.focus();
+                }
+            });
+        }
+        
         // Filtro buscador modal
         const buscador = document.getElementById('buscadorProducto');
         if(buscador) {
             buscador.addEventListener('keyup', function() {
                 const term = this.value.toLowerCase();
                 document.querySelectorAll('#listaOpcionesProductos button').forEach(btn => {
-                    // Buscar en el texto del botón (nombre del producto)
                     const text = btn.textContent.toLowerCase(); 
                     if (text.includes(term)) {
                         btn.style.setProperty('display', 'flex', 'important');

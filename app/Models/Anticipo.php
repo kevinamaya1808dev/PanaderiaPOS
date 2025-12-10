@@ -15,8 +15,9 @@ class Anticipo extends Model
     protected $fillable = [
         'pedido_id',
         'caja_id',
-        'monto',        // <--- Así se llama tu columna según la imagen
+        'monto',        
         'metodo_pago',
+        'referencia_pago',
         'user_id',
         'created_at',
         'updated_at',

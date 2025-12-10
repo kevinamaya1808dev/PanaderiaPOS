@@ -20,7 +20,7 @@ class PedidoController extends Controller
     {
         $pedidos = Pedido::with('cliente')
             ->where('estatus', '!=', 'entregado') 
-            ->where('estatus', '!=', 'cancelado') // Opcional: Ocultar cancelados de la agenda principal
+            ->where('estatus', '!=', 'cancelado') 
             ->orderBy('fecha_entrega', 'asc')
             ->get();
 
@@ -43,12 +43,15 @@ class PedidoController extends Controller
             'fecha_entrega' => 'required|date|after:today',
             'anticipo' => 'required|numeric|min:0',
             'productos' => 'required|array|min:1',
+            // CAMBIOS AQUI: Validar metodo y referencia si envian anticipo
+            'metodo_pago' => 'nullable|string', 
+            'referencia_pago' => 'nullable|string|max:100', 
         ]);
 
         DB::beginTransaction();
 
         try {
-            // 0. OBTENER CAJA ACTUAL (Consulta segura)
+            // 0. OBTENER CAJA ACTUAL
             $cajaAbierta = null;
             if ($request->anticipo > 0) {
                 $cajaAbierta = Caja::where('user_id', Auth::id())
@@ -68,7 +71,7 @@ class PedidoController extends Controller
                 $totalCalculado += $prod['precio'] * $prod['cantidad'];
             }
 
-            // 2. Crear el Pedido (La "Orden")
+            // 2. Crear el Pedido
             $pedido = Pedido::create([
                 'cliente_id' => $request->cliente_id, 
                 'nombre_cliente' => $request->nombre_cliente,
@@ -96,23 +99,27 @@ class PedidoController extends Controller
             // 4. LOGICA DE COBRO (ANTICIPO INICIAL)
             if ($request->anticipo > 0 && $cajaAbierta) {
                  
-                // A. Registrar el ANTICIPO (Registro administrativo)
+                // CAMBIO IMPORTANTE: Usar el método que viene del form o 'Efectivo' por defecto
+                $metodoPago = $request->metodo_pago ?? 'Efectivo';
+
+                // A. Registrar el ANTICIPO
                 Anticipo::create([
                     'pedido_id' => $pedido->id,
                     'caja_id' => $cajaAbierta->id,
                     'monto' => $request->anticipo,
-                    'metodo_pago' => 'Efectivo', 
+                    'metodo_pago' => $metodoPago, // <--- CAMBIO (Dinamico)
+                    'referencia_pago' => $request->referencia_pago, // <--- CAMBIO (Guardar referencia)
                     'user_id' => Auth::id(),
                 ]);
 
-                // B. Registrar en MOVIMIENTOS DE CAJA (Dinero físico)
+                // B. Registrar en MOVIMIENTOS DE CAJA
                 MovimientoCaja::create([
                     'caja_id' => $cajaAbierta->id, 
                     'user_id' => Auth::id(),
                     'tipo' => 'ingreso',
                     'monto' => $request->anticipo,
                     'descripcion' => 'Anticipo Pedido #' . $pedido->id . ' (' . $request->nombre_cliente . ')',
-                    'metodo_pago' => 'Efectivo', 
+                    'metodo_pago' => $metodoPago, // <--- CAMBIO
                     'created_at' => now(),
                 ]);
             }
@@ -126,31 +133,18 @@ class PedidoController extends Controller
         }
     }
 
-    // ==========================================
-    // NUEVAS FUNCIONES PARA EDITAR Y CANCELAR
-    // ==========================================
-
-    /**
-     * Muestra el formulario de edición.
-     */
+    // ... (Métodos edit, update y cancelar se quedan igual) ...
     public function edit($id)
     {
         $pedido = Pedido::with('detalles')->findOrFail($id);
-        
-        // Validación: No editar si ya está finalizado
         if ($pedido->estatus == 'entregado' || $pedido->estatus == 'cancelado') {
             return back()->with('error', 'No puedes editar un pedido que ya fue entregado o cancelado.');
         }
-
         $clientes = Cliente::all();
         $productos = Producto::all();
-        
         return view('pedidos.edit', compact('pedido', 'clientes', 'productos'));
     }
 
-    /**
-     * Actualiza el pedido (Recalcula totales y saldo).
-     */
     public function update(Request $request, $id)
     {
         $request->validate([
@@ -158,21 +152,14 @@ class PedidoController extends Controller
             'fecha_entrega' => 'required|date',
             'productos' => 'required|array|min:1',
         ]);
-
         $pedido = Pedido::findOrFail($id);
-
         DB::beginTransaction();
         try {
-            // 1. Recalcular Total con los nuevos productos
             $nuevoTotal = 0;
             $productosData = $request->productos;
-
             foreach ($productosData as $prod) {
                 $nuevoTotal += $prod['precio'] * $prod['cantidad'];
             }
-
-            // 2. Actualizar Pedido
-            // Mantenemos el anticipo original, pero actualizamos el total y el saldo
             $pedido->update([
                 'cliente_id' => $request->cliente_id,
                 'nombre_cliente' => $request->nombre_cliente,
@@ -182,10 +169,7 @@ class PedidoController extends Controller
                 'total' => $nuevoTotal,
                 'saldo_pendiente' => $nuevoTotal - $pedido->anticipo, 
             ]);
-
-            // 3. Sincronizar Detalles (Borrar anteriores y crear nuevos)
             DetallePedido::where('pedido_id', $pedido->id)->delete();
-
             foreach ($productosData as $prod) {
                 DetallePedido::create([
                     'pedido_id' => $pedido->id,
@@ -195,40 +179,29 @@ class PedidoController extends Controller
                     'especificaciones' => $prod['notas'] ?? null,
                 ]);
             }
-
             DB::commit();
             return redirect()->route('pedidos.index')->with('success', 'Pedido actualizado correctamente.');
-
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error', 'Error al actualizar: ' . $e->getMessage());
         }
     }
 
-    /**
-     * Cancela el pedido.
-     */
     public function cancelar($id)
     {
         $pedido = Pedido::findOrFail($id);
-
         if ($pedido->estatus == 'entregado') {
             return back()->with('error', 'No puedes cancelar un pedido ya entregado.');
         }
-
-        // Cambiar estatus a cancelado y limpiar deuda pendiente
         $pedido->update([
             'estatus' => 'cancelado',
             'saldo_pendiente' => 0
         ]);
-
         return redirect()->route('pedidos.index')->with('success', 'Pedido #' . $id . ' cancelado exitosamente.');
     }
 
-    // ==========================================
-    // FIN NUEVAS FUNCIONES
-    // ==========================================
-    
+    // ... (Fin métodos sin cambios) ...
+
     /**
      * Procesa la entrega del pedido y el cobro del saldo pendiente.
      */
@@ -237,6 +210,8 @@ class PedidoController extends Controller
         $request->validate([
             'pedido_id' => 'required|exists:pedidos,id',
             'metodo_pago' => 'required|in:efectivo,tarjeta,transferencia',
+            // CAMBIO AQUÍ: Validar la referencia
+            'referencia_pago' => 'nullable|string|max:100',
         ]);
 
         $pedido = Pedido::findOrFail($request->pedido_id);
@@ -258,6 +233,7 @@ class PedidoController extends Controller
                     'caja_id' => $cajaAbierta->id,
                     'monto' => $saldo,
                     'metodo_pago' => ucfirst($request->metodo_pago),
+                    'referencia_pago' => $request->referencia_pago, // <--- CAMBIO: Guardar referencia
                     'user_id' => Auth::id(),
                 ]);
 
@@ -294,9 +270,6 @@ class PedidoController extends Controller
         }
     }
 
-    /**
-     * Muestra la vista del ticket.
-     */
     public function ticket($id)
     {
         $pedido = Pedido::with(['detalles.producto', 'cliente'])->findOrFail($id);
