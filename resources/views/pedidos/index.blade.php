@@ -169,7 +169,6 @@
                         <select name="metodo_pago" id="metodo_pago" class="form-select form-select-lg" required>
                             <option value="efectivo" selected>💵 Efectivo</option>
                             <option value="tarjeta">💳 Tarjeta de Débito/Crédito</option>
-                            <option value="transferencia">📱 Transferencia</option>
                         </select>
                     </div>
 
