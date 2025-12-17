@@ -36,14 +36,16 @@ class PedidoController extends Controller
     }
 
     // Guardar el pedido
+    // Guardar el pedido (Imagen 4)
     public function store(Request $request)
     {
+        // 1. Validar que recibimos el método y la referencia
         $request->validate([
             'nombre_cliente' => 'required|string',
             'fecha_entrega' => 'required|date|after:today',
             'anticipo' => 'required|numeric|min:0',
             'productos' => 'required|array|min:1',
-            // CAMBIOS AQUI: Validar metodo y referencia si envian anticipo
+            // ESTO ES VITAL: Validar los campos del modal
             'metodo_pago' => 'nullable|string', 
             'referencia_pago' => 'nullable|string|max:100', 
         ]);
@@ -71,14 +73,14 @@ class PedidoController extends Controller
                 $totalCalculado += $prod['precio'] * $prod['cantidad'];
             }
 
-            // 2. Crear el Pedido
+            // 2. Crear el Pedido (Esto se guarda en tabla 'pedidos')
             $pedido = Pedido::create([
                 'cliente_id' => $request->cliente_id, 
                 'nombre_cliente' => $request->nombre_cliente,
                 'telefono_cliente' => $request->telefono_cliente,
                 'fecha_entrega' => $request->fecha_entrega,
                 'total' => $totalCalculado,
-                'anticipo' => $request->anticipo,
+                'anticipo' => $request->anticipo, // Solo guarda la CANTIDAD como dato
                 'saldo_pendiente' => $totalCalculado - $request->anticipo, 
                 'notas_especiales' => $request->notas_especiales,
                 'estatus' => 'pendiente',
@@ -96,33 +98,37 @@ class PedidoController extends Controller
                 ]);
             }
 
-            // 4. LOGICA DE COBRO (ANTICIPO INICIAL)
-            if ($request->anticipo > 0 && $cajaAbierta) {
-                 
-                // CAMBIO IMPORTANTE: Usar el método que viene del form o 'Efectivo' por defecto
-                $metodoPago = $request->metodo_pago ?? 'Efectivo';
+            // ... dentro de public function store ...
 
-                // A. Registrar el ANTICIPO
-                Anticipo::create([
-                    'pedido_id' => $pedido->id,
-                    'caja_id' => $cajaAbierta->id,
-                    'monto' => $request->anticipo,
-                    'metodo_pago' => $metodoPago, // <--- CAMBIO (Dinamico)
-                    'referencia_pago' => $request->referencia_pago, // <--- CAMBIO (Guardar referencia)
-                    'user_id' => Auth::id(),
-                ]);
+    // 4. LOGICA DE COBRO
+    if ($request->anticipo > 0 && $cajaAbierta) {
+            
+        // AJUSTE DE SEGURIDAD:
+        // Forzamos a ver qué está llegando. Si llega vacío, ponemos 'Efectivo'.
+        $metodoPago = $request->input('metodo_pago', 'Efectivo');
+        $referencia = $request->input('referencia_pago', null);
 
-                // B. Registrar en MOVIMIENTOS DE CAJA
-                MovimientoCaja::create([
-                    'caja_id' => $cajaAbierta->id, 
-                    'user_id' => Auth::id(),
-                    'tipo' => 'ingreso',
-                    'monto' => $request->anticipo,
-                    'descripcion' => 'Anticipo Pedido #' . $pedido->id . ' (' . $request->nombre_cliente . ')',
-                    'metodo_pago' => $metodoPago, // <--- CAMBIO
-                    'created_at' => now(),
-                ]);
-            }
+        // A. Registrar el ANTICIPO
+        Anticipo::create([
+            'pedido_id' => $pedido->id,
+            'caja_id' => $cajaAbierta->id,
+            'monto' => $request->anticipo,
+            'metodo_pago' => $metodoPago, 
+            'referencia_pago' => $referencia,
+            'user_id' => Auth::id(),
+        ]);
+
+        // B. Registrar en MOVIMIENTOS DE CAJA
+        MovimientoCaja::create([
+            'caja_id' => $cajaAbierta->id, 
+            'user_id' => Auth::id(),
+            'tipo' => 'ingreso',
+            'monto' => $request->anticipo,
+            'descripcion' => "Anticipo Pedido #{$pedido->id} ({$request->nombre_cliente}) - Ref: {$referencia}", // Agregamos la ref a la descripción también
+            'metodo_pago' => $metodoPago, 
+            'created_at' => now(),
+        ]);
+    }
 
             DB::commit();
             return redirect()->route('pedidos.index')->with('success', 'Pedido registrado correctamente. Folio: ' . $pedido->id);
@@ -200,17 +206,15 @@ class PedidoController extends Controller
         return redirect()->route('pedidos.index')->with('success', 'Pedido #' . $id . ' cancelado exitosamente.');
     }
 
-    // ... (Fin métodos sin cambios) ...
-
-    /**
+   /**
      * Procesa la entrega del pedido y el cobro del saldo pendiente.
      */
     public function entregar(Request $request)
     {
         $request->validate([
             'pedido_id' => 'required|exists:pedidos,id',
-            'metodo_pago' => 'required|in:efectivo,tarjeta,transferencia',
-            // CAMBIO AQUÍ: Validar la referencia
+            // VALIDACIÓN CORREGIDA: Solo Efectivo y Tarjeta
+            'metodo_pago' => 'required|in:efectivo,tarjeta', 
             'referencia_pago' => 'nullable|string|max:100',
         ]);
 
@@ -228,30 +232,41 @@ class PedidoController extends Controller
                     throw new \Exception('¡No tienes una caja abierta para recibir el pago! Por favor abre turno.');
                 }
 
+                // 1. Guardar en ANTICIPOS (Aquí se guarda el registro contable del pedido)
                 Anticipo::create([
                     'pedido_id' => $pedido->id,
                     'caja_id' => $cajaAbierta->id,
                     'monto' => $saldo,
                     'metodo_pago' => ucfirst($request->metodo_pago),
-                    'referencia_pago' => $request->referencia_pago, // <--- CAMBIO: Guardar referencia
+                    'referencia_pago' => $request->referencia_pago, // Se guarda el folio correctamente
                     'user_id' => Auth::id(),
                 ]);
 
+                // 2. Guardar en MOVIMIENTOS DE CAJA (Para el reporte del turno)
+                // Construimos una descripción detallada
+                $descripcionMovimiento = "Liquidación Pedido #{$pedido->id} ({$pedido->nombre_cliente})";
+                
+                // Si es tarjeta y hay referencia, la agregamos al texto para que se vea en el corte
+                if ($request->metodo_pago == 'tarjeta' && $request->referencia_pago) {
+                    $descripcionMovimiento .= " - Ref: " . $request->referencia_pago;
+                }
+
                 MovimientoCaja::create([
-                    'caja_id' => $cajaAbierta->id,
+                    'caja_id' => $cajaAbierta->id, 
                     'user_id' => Auth::id(),
                     'tipo' => 'ingreso',
                     'monto' => $saldo,
-                    'descripcion' => "Liquidación Pedido #{$pedido->id} ({$pedido->nombre_cliente})",
+                    'descripcion' => $descripcionMovimiento, 
                     'metodo_pago' => $request->metodo_pago,
                     'created_at' => now(),
                 ]);
             }
 
+            // Actualizar el estatus del pedido
             $pedido->update([
                 'estatus' => 'entregado',
                 'saldo_pendiente' => 0, 
-                'anticipo' => $pedido->total 
+                'anticipo' => $pedido->total // El anticipo ahora es el total porque ya se pagó todo
             ]);
             
             DB::commit();
