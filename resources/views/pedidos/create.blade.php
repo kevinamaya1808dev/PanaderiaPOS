@@ -95,7 +95,6 @@
                                     <select name="metodo_pago" id="selectMetodoPago" class="form-select form-select-sm">
                                         <option value="Efectivo">Efectivo</option>
                                         <option value="Tarjeta">Tarjeta</option>
-                                        <option value="Transferencia">Transferencia</option>
                                     </select>
                                 </div>
 
