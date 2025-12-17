@@ -78,7 +78,7 @@
                         </div>
                     </div>
                     
-                    {{-- AQUÍ ESTÁN LOS CAMBIOS EN EL FOOTER --}}
+                    {{-- FOOTER CON TOTALES Y PAGOS --}}
                     <div class="card-footer bg-white">
                         <div class="row text-end align-items-center">
                             <div class="col-md-6 offset-md-6">
@@ -89,7 +89,7 @@
                                 
                                 <hr>
 
-                                {{-- NUEVO: Selector de Método de Pago --}}
+                                {{-- Selector de Método de Pago --}}
                                 <div class="mb-2 text-start">
                                     <label class="form-label small fw-bold">Método de Pago (Anticipo):</label>
                                     <select name="metodo_pago" id="selectMetodoPago" class="form-select form-select-sm">
@@ -98,16 +98,25 @@
                                     </select>
                                 </div>
 
-                                {{-- NUEVO: Input Referencia (Oculto por defecto) --}}
+                                {{-- Input Referencia (Oculto por defecto) --}}
                                 <div class="mb-2 text-start" id="divReferenciaPago" style="display: none;">
                                     <label class="form-label small fw-bold">Referencia / Folio:</label>
                                     <input type="text" name="referencia_pago" id="inputReferenciaPago" class="form-control form-control-sm" placeholder="4 últimos dígitos o n° autorización">
                                 </div>
 
+                                {{-- Input Anticipo CON BOTÓN CALCULADORA --}}
+                                <label class="form-label small fw-bold text-start w-100 mb-1">Anticipo (Paga hoy)</label>
                                 <div class="input-group mb-2">
-                                    <span class="input-group-text bg-success text-white">Anticipo (Paga hoy)</span>
+                                    <span class="input-group-text bg-success text-white fw-bold">$</span>
+                                    
                                     <input type="number" name="anticipo" id="inputAnticipo" class="form-control text-end fw-bold text-success" step="0.50" min="0" value="0" required>
+                                    
+                                    {{-- NUEVO: Botón Calculadora (Solo aparece en efectivo) --}}
+                                    <button class="btn btn-outline-secondary" type="button" id="btnCalculadora" title="Calcular Cambio">
+                                        <i class="fas fa-calculator"></i>
+                                    </button>
                                 </div>
+
                                 <div class="d-flex justify-content-between text-danger fw-bold">
                                     <span>Resta por pagar:</span>
                                     <span id="txtSaldo">$0.00</span>
@@ -127,7 +136,7 @@
     </form>
 </div>
 
-{{-- MODAL PARA SELECCIONAR PRODUCTOS --}}
+{{-- MODAL 1: SELECCIONAR PRODUCTOS --}}
 <div class="modal fade" id="modalProductos" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -153,32 +162,64 @@
     </div>
 </div>
 
+{{-- MODAL 2 (NUEVO): CALCULADORA DE CAMBIO --}}
+<div class="modal fade" id="modalCalculadora" tabindex="-1">
+    <div class="modal-dialog modal-sm modal-dialog-centered"> <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title text-dark"><i class="fas fa-cash-register me-2"></i>Calcular Cambio</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                {{-- Monto del Anticipo (Solo lectura) --}}
+                <div class="mb-3 text-center">
+                    <label class="small text-muted fw-bold">El cliente debe dejar (Anticipo):</label>
+                    <h3 class="text-success fw-bold" id="calcMontoAnticipo">$0.00</h3>
+                </div>
+
+                {{-- Input Paga Con --}}
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Paga con:</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" id="calcPagaCon" class="form-control form-control-lg fw-bold" placeholder="0.00">
+                    </div>
+                </div>
+
+                {{-- Resultado Cambio --}}
+                <div class="alert alert-light border text-center">
+                    <label class="small text-muted fw-bold">Su Cambio:</label>
+                    <h2 class="text-primary fw-bold mb-0" id="calcResultado">$0.00</h2>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary w-100" data-bs-dismiss="modal">Aceptar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {{-- SCRIPTS --}}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         
-        // --- 1. Lógica de Productos ---
+        // --- VARIABLES GLOBALES ---
         let totalGlobal = 0;
         let productoIndex = 0;
         const listaProductos = document.getElementById('listaProductos');
         const filaVacia = document.getElementById('filaVacia');
         const inputAnticipo = document.getElementById('inputAnticipo');
-        
-        // Variables para método de pago
         const selectMetodo = document.getElementById('selectMetodoPago');
         const divReferencia = document.getElementById('divReferenciaPago');
         const inputReferencia = document.getElementById('inputReferenciaPago');
+        const btnCalculadora = document.getElementById('btnCalculadora');
 
-        // Al hacer clic en un producto del modal
+        // --- 1. Lógica de Productos (Sin cambios mayores) ---
         document.querySelectorAll('.btn-producto').forEach(btn => {
             btn.addEventListener('click', function() {
                 const id = this.dataset.id;
                 const nombre = this.dataset.nombre;
                 const precio = parseFloat(this.dataset.precio);
-
                 agregarFila(id, nombre, precio);
-                
-                // Cerrar modal (Bootstrap 5)
                 const modalEl = document.getElementById('modalProductos');
                 const modal = bootstrap.Modal.getInstance(modalEl);
                 modal.hide();
@@ -186,16 +227,14 @@
         });
 
         function agregarFila(id, nombre, precio) {
-            // Ocultar fila de "Sin productos"
             if(filaVacia) filaVacia.style.display = 'none';
-
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td>
                     <input type="hidden" name="productos[${productoIndex}][id]" value="${id}">
                     <input type="hidden" name="productos[${productoIndex}][precio]" value="${precio}">
                     <strong>${nombre}</strong><br>
-                    <input type="text" name="productos[${productoIndex}][notas]" class="form-control form-control-sm mt-1" placeholder="Nota del producto (ej. Relleno fresa)">
+                    <input type="text" name="productos[${productoIndex}][notas]" class="form-control form-control-sm mt-1" placeholder="Nota del producto">
                 </td>
                 <td>
                     <input type="number" name="productos[${productoIndex}][cantidad]" class="form-control input-cantidad text-center" value="1" min="1" onchange="window.actualizarFila(this, ${precio})">
@@ -206,13 +245,11 @@
                     <button type="button" class="btn btn-sm btn-danger" onclick="window.eliminarFila(this)"><i class="fas fa-trash"></i></button>
                 </td>
             `;
-            
             listaProductos.appendChild(row);
             productoIndex++;
             calcularTotales();
         }
 
-        // Definimos funciones en window para que el onclick del HTML las encuentre
         window.actualizarFila = function(input, precio) {
             const cantidad = parseInt(input.value) || 0;
             const subtotal = cantidad * precio;
@@ -223,7 +260,6 @@
 
         window.eliminarFila = function(btn) {
             btn.closest('tr').remove();
-            // Si ya no hay filas (o solo queda la oculta si no se borró bien), mostramos el mensaje
             if(listaProductos.querySelectorAll('tr').length <= 1) { 
                 if(filaVacia) filaVacia.style.display = 'table-row';
             }
@@ -237,10 +273,8 @@
                 const row = input.closest('tr');
                 const precioInput = row.querySelector('input[name*="[precio]"]');
                 const precio = parseFloat(precioInput.value) || 0;
-                
                 suma += cantidad * precio;
             });
-
             totalGlobal = suma;
             document.getElementById('txtTotal').textContent = '$' + totalGlobal.toFixed(2);
             calcularSaldo();
@@ -249,53 +283,85 @@
         function calcularSaldo() {
             const anticipo = parseFloat(inputAnticipo.value) || 0;
             const saldo = totalGlobal - anticipo;
-            
             const spanSaldo = document.getElementById('txtSaldo');
             spanSaldo.textContent = '$' + (saldo < 0 ? '0.00' : saldo.toFixed(2));
-
-            if(saldo < 0) {
-                inputAnticipo.classList.add('is-invalid'); 
-            } else {
-                inputAnticipo.classList.remove('is-invalid');
-            }
+            if(saldo < 0) { inputAnticipo.classList.add('is-invalid'); } 
+            else { inputAnticipo.classList.remove('is-invalid'); }
         }
 
-        // Recalcular saldo al escribir anticipo
         if(inputAnticipo) {
             inputAnticipo.addEventListener('input', calcularSaldo);
         }
         
-        // --- 2. Lógica Método de Pago y Referencia (NUEVO) ---
+        // --- 2. Lógica Método de Pago y Botón Calculadora ---
         if(selectMetodo) {
             selectMetodo.addEventListener('change', function() {
                 const metodo = this.value;
                 if (metodo === 'Tarjeta' || metodo === 'Transferencia') {
                     divReferencia.style.display = 'block';
-                    inputReferencia.required = true; // Obligatorio si es tarjeta
+                    inputReferencia.required = true;
+                    btnCalculadora.style.display = 'none'; // Ocultar calculadora
                 } else {
                     divReferencia.style.display = 'none';
                     inputReferencia.value = ''; 
                     inputReferencia.required = false;
+                    btnCalculadora.style.display = 'block'; // Mostrar calculadora
                 }
             });
         }
 
-        // --- 3. Validación al enviar (NUEVO) ---
-        const formPedido = document.getElementById('formPedido');
-        if(formPedido) {
-            formPedido.addEventListener('submit', function(e) {
+        // --- 3. Lógica del MODAL CALCULADORA ---
+        const modalCalculadora = new bootstrap.Modal(document.getElementById('modalCalculadora'));
+        const calcMontoAnticipo = document.getElementById('calcMontoAnticipo');
+        const calcPagaCon = document.getElementById('calcPagaCon');
+        const calcResultado = document.getElementById('calcResultado');
+
+        // Abrir modal al hacer click en el botón calculadora
+        if(btnCalculadora) {
+            btnCalculadora.addEventListener('click', function() {
                 const anticipoVal = parseFloat(inputAnticipo.value) || 0;
                 
-                // Si hay anticipo y se seleccionó tarjeta, pero no hay referencia
-                if (anticipoVal > 0 && selectMetodo.value !== 'Efectivo' && inputReferencia.value.trim() === '') {
-                    e.preventDefault(); // Detener envío
-                    alert('Por favor ingrese la referencia o folio del pago.');
-                    inputReferencia.focus();
+                if(anticipoVal <= 0) {
+                    alert('Primero ingresa el monto del anticipo para calcular el cambio.');
+                    inputAnticipo.focus();
+                    return;
+                }
+
+                // Preparar modal
+                const formatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+                calcMontoAnticipo.textContent = formatter.format(anticipoVal);
+                calcPagaCon.value = '';
+                calcResultado.textContent = '$0.00';
+                
+                modalCalculadora.show();
+
+                // Poner el foco en el input después de que abra el modal
+                setTimeout(() => { calcPagaCon.focus(); }, 500);
+            });
+        }
+
+        // Calcular cambio en tiempo real dentro del modal
+        if(calcPagaCon) {
+            calcPagaCon.addEventListener('input', function() {
+                const anticipoVal = parseFloat(inputAnticipo.value) || 0;
+                const pagaConVal = parseFloat(this.value) || 0;
+                const cambio = pagaConVal - anticipoVal;
+
+                const formatter = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
+
+                if(cambio < 0) {
+                    calcResultado.textContent = "Falta dinero";
+                    calcResultado.classList.add('text-danger');
+                    calcResultado.classList.remove('text-primary');
+                } else {
+                    calcResultado.textContent = formatter.format(cambio);
+                    calcResultado.classList.remove('text-danger');
+                    calcResultado.classList.add('text-primary');
                 }
             });
         }
-        
-        // Filtro buscador modal
+
+        // Filtro buscador productos
         const buscador = document.getElementById('buscadorProducto');
         if(buscador) {
             buscador.addEventListener('keyup', function() {
