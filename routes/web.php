@@ -286,7 +286,6 @@ Route::put('/pedidos/{id}', [PedidoController::class, 'update'])->name('pedidos.
 // 3. Ruta para cancelar el pedido (DELETE)
 Route::delete('/pedidos/{id}/cancelar', [PedidoController::class, 'cancelar'])->name('pedidos.cancelar');
 
-
 });
 
 
