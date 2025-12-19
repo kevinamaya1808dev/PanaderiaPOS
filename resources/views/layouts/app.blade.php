@@ -13,7 +13,13 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
     <link rel="stylesheet" href="{{ asset('css/styles.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <link rel="manifest" href="{{ asset('manifest.json') }}">
+    <meta name="theme-color" content="#d97706">
+    <link rel="apple-touch-icon" href="{{ asset('logo.png') }}">
+
 </head>
+
 <body>
     
     <nav class="top-header navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
@@ -169,5 +175,6 @@
 
         });
     </script>
-@stack('scripts')</body>
+@stack('scripts')
+</body>
 </html>

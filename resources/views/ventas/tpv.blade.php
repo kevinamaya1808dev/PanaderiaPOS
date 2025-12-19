@@ -14,19 +14,17 @@
                     <input type="search" id="product-search" class="form-control" placeholder="Buscar producto por nombre...">
                 </div>
 
-                {{-- BARRA DE FILTROS CORREGIDA (Para que el menú no se corte) --}}
+                {{-- BARRA DE FILTROS CORREGIDA --}}
                 <div class="d-flex mb-3 pb-2 border-bottom align-items-center">
                     
-                    {{-- 1. BOTÓN DE PRECIOS (Fijo a la izquierda) --}}
+                    {{-- 1. BOTÓN DE PRECIOS --}}
                     <div class="dropdown me-2">
                         <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" id="dropdownPrecios" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="fas fa-tags"></i> Precios
                         </button>
-                        {{-- z-index alto para asegurar que se vea al frente --}}
                         <ul class="dropdown-menu shadow" aria-labelledby="dropdownPrecios" style="max-height: 300px; overflow-y: auto; z-index: 1050;">
                             <li><a class="dropdown-item price-filter active" href="#" data-price="all">Todos los precios</a></li>
                             <li><hr class="dropdown-divider"></li>
-                            {{-- Lógica para obtener precios únicos --}}
                             @foreach ($productos->pluck('precio')->unique()->sort() as $precioUnico)
                                 <li>
                                     <a class="dropdown-item price-filter" href="#" data-price="{{ $precioUnico }}">
@@ -37,10 +35,9 @@
                         </ul>
                     </div>
 
-                    {{-- Separador vertical visual --}}
                     <div class="vr me-2"></div>
 
-                    {{-- 2. CATEGORÍAS (Contenedor con Scroll Horizontal independiente) --}}
+                    {{-- 2. CATEGORÍAS --}}
                     <div class="d-flex overflow-auto flex-grow-1">
                         <button class="btn btn-sm btn-outline-dark me-2 active category-filter" data-category-id="all">Todas</button>
                         @foreach ($categorias as $cat)
@@ -53,8 +50,6 @@
                 <div class="row g-3 overflow-auto p-2 border rounded shadow-sm bg-white" id="product-list" style="max-height: calc(100vh - 220px);">
                     @forelse ($productos as $producto)
                         <div class="col-4 col-sm-3 col-md-2 product-item" data-category-id="{{ $producto->categoria_id }}">
-                            
-                            {{-- Agregamos data-price aquí para que JS lo lea --}}
                             <div class="card h-100 product-card shadow-sm border-0" 
                                  style="cursor: pointer;"
                                  data-id="{{ $producto->id }}" 
@@ -90,7 +85,7 @@
             <div class="col-lg-4 d-flex flex-column border-start ps-4 h-100">
                 <h4 class="mb-3 text-danger"><i class="fas fa-shopping-cart me-2"></i> Orden Actual</h4>
                 
-                {{-- Cliente Editable con Dropdown --}}
+                {{-- Cliente Editable --}}
                 <div class="alert alert-info py-2 mb-3">
                     <div><small>Cajero: <strong>{{ Auth::user()->name }}</strong></small></div>
                     <hr class="my-1">
@@ -242,7 +237,7 @@
         const cart = {}; 
         let selectedClientId = null; 
         let currentCategoryId = 'all'; 
-        let currentPriceFilter = 'all'; // NUEVA VARIABLE PARA FILTRAR PRECIO
+        let currentPriceFilter = 'all'; 
 
         const clients = @json($clientes ?? []); 
         
@@ -460,7 +455,7 @@
         }
 
         // ============================================
-        // FILTROS DE PRODUCTO (CATEGORÍA + PRECIO)
+        // FILTROS DE PRODUCTO
         // ============================================
         function filterProducts() { 
             const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : ''; 
@@ -470,16 +465,13 @@
                 const productNameElement = item.querySelector('.product-name');
                 const productName = productNameElement ? productNameElement.textContent.toLowerCase() : '';
                 const itemCategoryId = item.dataset.categoryId;
-                // LEER PRECIO DESDE HTML
                 const itemPrice = parseFloat(item.querySelector('.product-card').dataset.price);
 
                 const categoryMatch = (currentCategoryId === 'all' || itemCategoryId === currentCategoryId);
                 const searchMatch = (searchTerm === '' || productName.includes(searchTerm));
                 
-                // LOGICA DE PRECIO
                 let priceMatch = true;
                 if(currentPriceFilter !== 'all'){
-                    // Comparar flotantes con pequeño margen
                     priceMatch = Math.abs(itemPrice - parseFloat(currentPriceFilter)) < 0.01;
                 }
 
@@ -487,7 +479,6 @@
             });
         }
         
-        // Filtro Categoría
         categoryFilters.forEach(button => { 
             button.addEventListener('click', function() {
                 categoryFilters.forEach(btn => {btn.classList.remove('active', 'btn-outline-dark'); btn.classList.add('btn-outline-secondary');});
@@ -498,19 +489,13 @@
             });
         });
 
-        // NUEVO: Filtro Precio
         if(priceFilters) {
             priceFilters.forEach(item => {
                 item.addEventListener('click', function(e) {
                     e.preventDefault();
-                    // Actualizar estilos dropdown
                     priceFilters.forEach(pf => pf.classList.remove('active'));
                     this.classList.add('active');
-                    
-                    // Actualizar filtro
                     currentPriceFilter = this.dataset.price;
-                    
-                    // Cambiar texto boton (UX)
                     if(dropdownPreciosBtn) {
                         if(currentPriceFilter === 'all') {
                             dropdownPreciosBtn.innerHTML = '<i class="fas fa-tags"></i> Precios';
@@ -518,7 +503,6 @@
                             dropdownPreciosBtn.innerHTML = '<i class="fas fa-tag"></i> ' + this.innerText;
                         }
                     }
-                    
                     filterProducts();
                 });
             });
@@ -529,7 +513,6 @@
         // ==========================================================
         // LÓGICA CLIENTES Y DROPDOWN
         // ==========================================================
-        
         function populateClientDropdown() { 
             if (!clientDropdownMenu) return; 
             const items = clientDropdownMenu.querySelectorAll('li:not(:first-child):not(:nth-child(2))');
@@ -560,10 +543,10 @@
             selectedClientId = id ? parseInt(id) : null;
             if(temporalClientInput){
                 if (!id && name === 'Público General') {
-                     temporalClientInput.value = '';
-                     temporalClientInput.placeholder = 'Público General';
+                      temporalClientInput.value = '';
+                      temporalClientInput.placeholder = 'Público General';
                 } else {
-                     temporalClientInput.value = name;
+                      temporalClientInput.value = name;
                 }
             }
         }
@@ -590,7 +573,6 @@
 
             temporalClientInput.addEventListener('input', function() { 
                 const typedName = this.value.toLowerCase().trim();
-                
                 const existingClient = clients.find(c => c.Nombre.toLowerCase() === typedName);
                 selectedClientId = existingClient ? existingClient.idCli : null; 
 
@@ -688,97 +670,182 @@
             }
         }
         
-        if (confirmPaymentBtn) { 
-    confirmPaymentBtn.addEventListener('click', async function() { 
-        if (Object.keys(cart).length === 0 || !totalSpan) return;
-
-        const detalles = Object.keys(cart).map(id => ({ 
-            producto_id: id, 
-            cantidad: cart[id].qty, 
-            precio_unitario: cart[id].price, 
-            costo_unitario: cart[id].cost, 
-            importe: cart[id].price * cart[id].qty 
-        }));
-        
-        const total = parseFloat(totalSpan.textContent.replace('$', ''));
-        const metodoPago = modalMetodoPago ? modalMetodoPago.value : 'efectivo';
-        let montoRecibido = modalMontoRecibido ? (parseFloat(modalMontoRecibido.value) || 0) : total;
-        let montoEntregado = 0;
-        
-        // Aquí ya capturabas bien el folio
-        const folioTarjeta = modalFolioPago ? modalFolioPago.value.trim() : null;
-
-        if (metodoPago === 'efectivo') {
-            montoEntregado = Math.max(0, montoRecibido - total); 
-            if (montoRecibido < total) {
-                showAlertModal('Monto recibido insuficiente.', 'Error de Pago');
-                if(modalMontoRecibido) modalMontoRecibido.focus();
-                return; 
-            }
-        } else if (metodoPago === 'tarjeta') {
-            montoRecibido = total; 
-            if (!folioTarjeta) { 
-                showAlertModal('Por favor, ingrese el folio o número de autorización.', 'Error de Pago');
-                if(modalFolioPago) modalFolioPago.focus();
-                return;
-            }
+        // ==========================================
+        //  FUNCIONES AUXILIARES OFFLINE
+        // ==========================================
+        function generateTempID() {
+            return 'OFFLINE-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
         }
-        
-        // --- AQUÍ ESTÁ EL CAMBIO IMPORTANTE ---
-        const payload = {
-            _token: csrfToken, 
-            cliente_id: selectedClientId, 
-            metodo_pago: metodoPago,
+
+        function procesarVentaExitosa(ventaId) {
+            if (paymentModal) paymentModal.hide();
             
-            // AGREGAMOS ESTA LÍNEA:
-            // Enviamos 'folioTarjeta' como 'referencia_pago' para que coincida con el Controller
-            referencia_pago: folioTarjeta, 
-
-            total: total, 
-            monto_recibido: montoRecibido, 
-            monto_entregado: montoEntregado,
-            detalles: detalles,
-            status: 'Pagada'
-        };
-        // --------------------------------------
-
-        this.disabled = true;
-        this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Procesando...';
-        
-        try {
-            const response = await fetch("{{ route('ventas.store') }}", { 
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken },
-                body: JSON.stringify(payload)
-            });
-            const result = await response.json(); 
-
-            if (response.ok) {
-                if(paymentModal) paymentModal.hide(); 
-                const printUrl = `{{ url('/ventas/imprimir') }}/${result.venta_id}`;
-                if (printFrame) {
-                    printFrame.src = printUrl; 
-                }
-                for (const id in cart) { delete cart[id]; }
-                updateSelectedClient(null, 'Público General'); 
-                updateCartUI();
-            } else { 
-                let errMsg = result.message || 'Error.';
-                if (result.errors) { errMsg += '\nDetalles:\n'; for(const f in result.errors) {errMsg += `- ${result.errors[f].join(', ')}\n`;} }
-                showAlertModal(errMsg, 'Error al Guardar Venta');
+            // Solo intentamos imprimir si tenemos ID del servidor
+            if (ventaId && printFrame) {
+                const printUrl = `{{ url('/ventas/imprimir') }}/${ventaId}`;
+                printFrame.src = printUrl;
             }
-        } catch (e) { 
-            console.error('Error al procesar venta:', e); 
-            showAlertModal('Error de conexión o problema en el script. Revise la consola.', 'Error de Red');
-        } 
-        finally {
-            this.disabled = false;
-            this.innerHTML = '<i class="fas fa-check-circle me-2"></i> Confirmar Pago';
-        }
-    }); 
-}
 
-        // Generar Ticket Pendiente
+            // Limpiar carrito
+            for (const id in cart) { delete cart[id]; }
+            updateSelectedClient(null, 'Público General');
+            updateCartUI();
+        }
+
+        function guardarVentaOffline(payload) {
+            payload.temp_id = generateTempID();
+            
+            let ventasPendientes = JSON.parse(localStorage.getItem('ventas_pendientes')) || [];
+            ventasPendientes.push(payload);
+            
+            localStorage.setItem('ventas_pendientes', JSON.stringify(ventasPendientes));
+            
+            if (paymentModal) paymentModal.hide();
+            
+            for (const id in cart) { delete cart[id]; }
+            updateSelectedClient(null, 'Público General');
+            updateCartUI();
+
+            showAlertModal(
+                'Sin conexión a internet. La venta se guardó en este dispositivo y se subirá automáticamente cuando vuelva la red.', 
+                'Venta Guardada (Modo Offline)', 
+                'warning'
+            );
+            
+            intentarSincronizar();
+        }
+
+        async function intentarSincronizar() {
+            if (!navigator.onLine) return;
+
+            const ventasPendientes = JSON.parse(localStorage.getItem('ventas_pendientes')) || [];
+            if (ventasPendientes.length === 0) return;
+
+            console.log(`Intentando subir ${ventasPendientes.length} ventas pendientes...`);
+            
+            const nuevasPendientes = [];
+
+            for (const venta of ventasPendientes) {
+                try {
+                    const response = await fetch("{{ route('ventas.store') }}", {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json', 
+                            'Accept': 'application/json', 
+                            'X-CSRF-TOKEN': csrfToken 
+                        },
+                        body: JSON.stringify(venta)
+                    });
+
+                    if (!response.ok) {
+                        console.error("Error servidor al subir venta offline", venta);
+                        nuevasPendientes.push(venta); 
+                    } else {
+                        console.log("Venta offline subida con éxito!");
+                    }
+                } catch (error) {
+                    console.error("Error red al subir venta offline", error);
+                    nuevasPendientes.push(venta);
+                }
+            }
+
+            localStorage.setItem('ventas_pendientes', JSON.stringify(nuevasPendientes));
+
+            if (ventasPendientes.length > nuevasPendientes.length) {
+                const subidas = ventasPendientes.length - nuevasPendientes.length;
+                showAlertModal(`¡Conexión restablecida! Se sincronizaron ${subidas} ventas pendientes.`, 'Sincronización Exitosa', 'success');
+            }
+        }
+
+        // ==========================================
+        //  LISTENER DE COBRO (MODIFICADO PARA OFFLINE)
+        // ==========================================
+        if (confirmPaymentBtn) { 
+            confirmPaymentBtn.addEventListener('click', async function() { 
+                if (Object.keys(cart).length === 0 || !totalSpan) return;
+
+                const detalles = Object.keys(cart).map(id => ({ 
+                    producto_id: id, 
+                    cantidad: cart[id].qty, 
+                    precio_unitario: cart[id].price, 
+                    costo_unitario: cart[id].cost, 
+                    importe: cart[id].price * cart[id].qty 
+                }));
+                
+                const total = parseFloat(totalSpan.textContent.replace('$', ''));
+                const metodoPago = modalMetodoPago ? modalMetodoPago.value : 'efectivo';
+                let montoRecibido = modalMontoRecibido ? (parseFloat(modalMontoRecibido.value) || 0) : total;
+                let montoEntregado = 0;
+                
+                const folioTarjeta = modalFolioPago ? modalFolioPago.value.trim() : null;
+
+                if (metodoPago === 'efectivo') {
+                    montoEntregado = Math.max(0, montoRecibido - total); 
+                    if (montoRecibido < total) {
+                        showAlertModal('Monto recibido insuficiente.', 'Error de Pago');
+                        if(modalMontoRecibido) modalMontoRecibido.focus();
+                        return; 
+                    }
+                } else if (metodoPago === 'tarjeta') {
+                    montoRecibido = total; 
+                    if (!folioTarjeta) { 
+                        showAlertModal('Por favor, ingrese el folio o número de autorización.', 'Error de Pago');
+                        if(modalFolioPago) modalFolioPago.focus();
+                        return;
+                    }
+                }
+                
+                const payload = {
+                    _token: csrfToken, 
+                    cliente_id: selectedClientId, 
+                    metodo_pago: metodoPago,
+                    referencia_pago: folioTarjeta, 
+                    total: total, 
+                    monto_recibido: montoRecibido, 
+                    monto_entregado: montoEntregado,
+                    detalles: detalles,
+                    status: 'Pagada',
+                    fecha_local: new Date().toISOString()
+                };
+
+                this.disabled = true;
+                this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Procesando...';
+                
+                // LÓGICA OFFLINE/ONLINE
+                if (navigator.onLine) {
+                    try {
+                        const response = await fetch("{{ route('ventas.store') }}", { 
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+                            body: JSON.stringify(payload)
+                        });
+                        
+                        if (response.ok) {
+                            const result = await response.json(); 
+                            procesarVentaExitosa(result.venta_id);
+                        } else { 
+                            // Error del servidor (validación, etc), NO guardar offline
+                            const result = await response.json();
+                            let errMsg = result.message || 'Error.';
+                            if (result.errors) { errMsg += '\nDetalles:\n'; for(const f in result.errors) {errMsg += `- ${result.errors[f].join(', ')}\n`;} }
+                            showAlertModal(errMsg, 'Error al Guardar Venta');
+                        }
+                    } catch (e) { 
+                        console.warn('Red caída o error fetch. Guardando offline...', e);
+                        guardarVentaOffline(payload);
+                    } 
+                } else {
+                    // Sin internet directo
+                    guardarVentaOffline(payload);
+                }
+
+                // Restaurar botón
+                this.disabled = false;
+                this.innerHTML = '<i class="fas fa-check-circle me-2"></i> Confirmar Pago';
+            }); 
+        }
+
+        // Generar Ticket Pendiente (Este se mantiene casi igual, pero podrías aplicar lógica similar si quisieras)
         if (btnGenerarTicket) {
             btnGenerarTicket.addEventListener('click', function() {
                 if (Object.keys(cart).length === 0 || !totalSpan) return;
@@ -833,7 +900,7 @@
                             }
                         } catch (e) { 
                             console.error('Error al procesar venta pendiente:', e); 
-                            showAlertModal('Error de conexión o problema en el script. Revise la consola.', 'Error de Red');
+                            showAlertModal('Error de conexión. Las ventas pendientes requieren conexión al servidor.', 'Error de Red');
                         } 
                         finally {
                             btnGenerarTicket.disabled = false;
@@ -850,6 +917,19 @@
         populateClientDropdown();
         updateSelectedClient(null, 'Público General');
 
+        // Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then((reg) => { console.log('Service Worker registrado:', reg.scope); })
+                    .catch((err) => { console.error('Falló Service Worker:', err); });
+            });
+        }
+
+        // Activadores de Sincronización
+        window.addEventListener('online', intentarSincronizar);
+        setTimeout(intentarSincronizar, 3000); // Intentar al cargar por si hay pendientes viejas
+        
     }); // Fin DOMContentLoaded
 </script>
 
