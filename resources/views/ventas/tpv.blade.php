@@ -421,17 +421,21 @@
 
         // Listeners de Carrito y Productos
         if (cartDiv) { 
-            cartDiv.addEventListener('click', function(e) { 
-                const target = e.target;
-                if (target.classList.contains('add-item')) {
-                    const id = target.dataset.id;
-                    const item = cart[id];
-                    if (item) addItem(id, item.name, item.price, item.stock);
-                } else if (target.classList.contains('remove-item')) {
-                    const id = target.dataset.id;
-                    removeItem(id);
-                }
-            }); 
+           cartDiv.addEventListener('click', function(e) {
+    const target = e.target;
+
+    if (target.classList.contains('add-item')) {
+        e.stopPropagation(); // 👈 CLAVE
+        const id = target.dataset.id;
+        const item = cart[id];
+        if (item) addItem(id, item.name, item.price, item.cost, item.stock);
+
+    } else if (target.classList.contains('remove-item')) {
+        e.stopPropagation(); // 👈 CLAVE
+        const id = target.dataset.id;
+        removeItem(id);
+    }
+});
             cartDiv.addEventListener('change', function(e) {
                 if (e.target.classList.contains('cart-item-qty')) {
                     const id = e.target.dataset.id;
